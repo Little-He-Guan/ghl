@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unit_test", "unit_test\unit
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "data_structures", "data_structures\data_structures.vcxproj", "{D72CF358-6245-47D4-ACBE-7579210F3222}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "algorithms", "algorithms\algorithms.vcxproj", "{01F45DDD-0B0A-4143-9169-4465DA7E98BA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,14 @@ Global
 		{D72CF358-6245-47D4-ACBE-7579210F3222}.Release|x64.Build.0 = Release|x64
 		{D72CF358-6245-47D4-ACBE-7579210F3222}.Release|x86.ActiveCfg = Release|Win32
 		{D72CF358-6245-47D4-ACBE-7579210F3222}.Release|x86.Build.0 = Release|Win32
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Debug|x64.ActiveCfg = Debug|x64
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Debug|x64.Build.0 = Debug|x64
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Debug|x86.ActiveCfg = Debug|Win32
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Debug|x86.Build.0 = Debug|Win32
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Release|x64.ActiveCfg = Release|x64
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Release|x64.Build.0 = Release|x64
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Release|x86.ActiveCfg = Release|Win32
+		{01F45DDD-0B0A-4143-9169-4465DA7E98BA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

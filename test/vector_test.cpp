@@ -59,6 +59,39 @@ DEFINE_TEST_CASE(test_vector_constructor_list)
 
 ENDDEF_TEST_CASE
 
+DEFINE_TEST_CASE(test_vector_constructor_iter)
+
+	// begin = end
+	ghl::vector<int> v0((int*)nullptr, (int*)nullptr);
+
+	ASSERT_TRUE(v0.check_rep(), "expected to have the invariant held")
+
+	ASSERT_TRUE(nullptr != ghl::vector_tester::get_start(v0), "expected to get an allocated space");
+	ASSERT_EQUALS(1, v0.capacity(), "expected to get a 1 capacity")
+	ASSERT_EQUALS(0, v0.size(), "expected to get a 0 size")
+
+	// begin > end
+	ghl::vector<int> v1((int*)333000, (int*)nullptr);
+
+	ASSERT_TRUE(v1.check_rep(), "expected to have the invariant held")
+
+	ASSERT_TRUE(nullptr != ghl::vector_tester::get_start(v1), "expected to get an allocated space");
+	ASSERT_EQUALS(1, v1.capacity(), "expected to get a 1 capacity")
+	ASSERT_EQUALS(0, v1.size(), "expected to get a 0 size")
+
+	// end > begin
+	ghl::vector<int> vtemp{ 1, 2, 3 };
+	ghl::vector<int> vsome(vtemp.begin(), vtemp.end());
+	ASSERT_TRUE(nullptr != ghl::vector_tester::get_start(vsome), "expected to get an allocated space");
+	ASSERT_EQUALS(3, vsome.capacity(), "expected to get a 3 capacity")
+	ASSERT_EQUALS(3, vsome.size(), "expected to get a 3 size")
+
+	ASSERT_EQUALS(1, vsome[0], "expected to get 1 for the first element")
+	ASSERT_EQUALS(2, vsome[1], "expected to get 2 for the second element")
+	ASSERT_EQUALS(3, vsome[2], "expected to get 3 for the third element")
+
+ENDDEF_TEST_CASE
+
 DEFINE_TEST_CASE(test_vector_copy_constructor)
 
 	ghl::vector<int> v0{ 4,5,6 };
@@ -285,6 +318,7 @@ void test_vector()
 		{
 			&test_vector_constructor_size, 
 			&test_vector_constructor_list,
+			&test_vector_constructor_iter,
 			&test_vector_copy_constructor,
 			&test_vector_move_constructor,
 		}, 

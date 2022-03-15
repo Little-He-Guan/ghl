@@ -56,6 +56,27 @@ namespace ghl
 				++i;
 			}
 		}
+		
+		/*
+		* Requires random access iter
+		*/
+		template <typename Iter>
+		vector(Iter begin, Iter end)
+			: vector((end - begin > 0) ? (end - begin) : 0)
+		{
+			if (end - begin > 0)
+			{
+				m_size = end - begin;
+
+				size_t ind = 0;
+				for (auto iter = begin; iter != end; ++iter)
+				{
+					new (mp_start + ind) T(*iter);
+					++ind;
+				}
+			}
+		}
+
 		/*
 		* Allocates count number of objects on memory but do not initialize them
 		* 
@@ -65,8 +86,8 @@ namespace ghl
 		{
 			// need not to set size
 
-			// allocate such amount of memory on heap. If count = 1, allocate 1 element space
-			mp_start = (T*)malloc((0 == count) ? 1 : (sizeof(T) * count));
+			// allocate such amount of memory on heap. If count = 0, allocate 1 element space
+			mp_start = (T*)malloc((0 == count) ? sizeof(T) : (sizeof(T) * count));
 
 			if (nullptr == mp_start)
 			{
@@ -105,9 +126,10 @@ namespace ghl
 				{
 					(mp_start + i)->~T();
 				}
+
+				// start is not nullptr
+				free((void*)mp_start);
 			}
-			// start is not nullptr
-			free(mp_start);
 		}
 #pragma endregion
 
@@ -201,10 +223,10 @@ namespace ghl
 		// supports ranged-for
 
 		iterator begin() { return mp_start; }
-		iterator end() { return mp_start + m_capacity; }
+		iterator end() { return mp_start + m_size; }
 
 		const_iterator cbegin() const { return mp_start; }
-		const_iterator cend() const { return mp_start + m_capacity; }
+		const_iterator cend() const { return mp_start + m_size; }
 #pragma endregion
 
 #pragma region operations
