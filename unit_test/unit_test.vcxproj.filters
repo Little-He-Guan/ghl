@@ -27,6 +27,9 @@
     <ClInclude Include="test_case.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="example_test_classes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="unit_test.cpp">

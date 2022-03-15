@@ -15,10 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="vector_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

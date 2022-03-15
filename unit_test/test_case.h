@@ -51,12 +51,17 @@ namespace ghl
 * 1. the function is independent of other test cases (i.e. its result is not influenced by other test cases in any way)
 * 2. the function is consistent (i.e. all calls to it give the same info)
 * 
-* The function should be defined by DEFINE_TEST_CASE and ENDDEF_TEST_CASE macros
+* The function should be defined by DEFINE_TEST_CASE and ENDDEF_TEST_CASE macros, and may be declared by DECLARE_TEST_CASE macro
 */
 
-#define ASSERT_TRUE(expr, msg) if(!(expr)) { ghl_arg.on_failure(msg); return; }
-#define ASSERT_FALSE(expr, msg) if(expr) { ghl_arg.on_failure(msg); return; }
+// the two macros are used to convert __LINE__ from an integer literal to a string literal
+#define STRINGIFY_LINE(line) #line
+#define EVALUATE_LINE(line) STRINGIFY_LINE(line)
+
+#define ASSERT_TRUE(expr, msg) if(!(expr)) { ghl_arg.on_failure(msg " in file: " __FILE__ " at line: " EVALUATE_LINE(__LINE__)); return; }
+#define ASSERT_FALSE(expr, msg) if(expr) { ghl_arg.on_failure(msg " in file: " __FILE__ " at line: " EVALUATE_LINE(__LINE__)); return; }
 #define ASSERT_EQUALS(expected, actual, msg) ASSERT_TRUE(expected == actual, msg)
 
+#define DECLARE_TEST_CASE(name) extern void name(ghl::test_case_info & ghl_arg);
 #define DEFINE_TEST_CASE(name) void name(ghl::test_case_info & ghl_arg) { ghl_arg.begin_test_case();
-#define ENDDEF_TEST_CASE(name) ghl_arg.end_test_case(); }
+#define ENDDEF_TEST_CASE ghl_arg.end_test_case(); }

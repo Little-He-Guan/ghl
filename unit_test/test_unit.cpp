@@ -46,6 +46,7 @@ void ghl::test_unit::execute()
 	msg.resize(msg_size_without_errors);
 	// write the message without the errors
 	// the size needs to + 1 because sprintf_s writes one extra \0
+	// the \0 will be overwritten by the += operations below
 	sprintf_s(&msg[0], msg_size_without_errors + 1, msg_format_str, info_cpy.c_str(), test_cases.size(), num_successes);
 
 	// write the error messages

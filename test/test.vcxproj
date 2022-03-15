@@ -141,8 +141,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="vector_test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\data_structures\data_structures.vcxproj">
+      <Project>{d72cf358-6245-47d4-acbe-7579210f3222}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\unit_test\unit_test.vcxproj">
       <Project>{51263330-4b61-42ac-b2fb-f50cc5af4a92}</Project>
     </ProjectReference>
