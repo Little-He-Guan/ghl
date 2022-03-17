@@ -140,6 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="list_test.cpp" />
     <ClCompile Include="sorting_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="vector_test.cpp" />

@@ -5,13 +5,16 @@
 #include <iostream>
 
 void test_vector();
+void test_list();
 void test_sortings();
 
 int main()
 {
 	//test_vector();
 
-	test_sortings();
+	//test_sortings();
+
+	test_list();
 
 	return 0;
 }
