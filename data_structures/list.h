@@ -10,14 +10,15 @@ namespace ghl
 	* which must satisfy the requirments of std::unique_ptr
 	* 
 	* Features:
-	* 1. object will not be destroyed even if it's not in the list anymore, as long as there are some iterators pointing to it. (achieved by shared_ptr)
-	*	One side effect of the feature is that other elements that are not directly pointed to by the iter may be indirectly owned by the iter.
-	* 2. constant time insertion and deletion at random position
-	* 3. const list is immutable, which does not allow modifications to its elements
+	* 1. constant time insertion and deletion at random position
+	* 2. const list is immutable, which does not allow modifications to its elements
 	* 
 	* Thread-safety: No
 	* 
-	* Invariant: None
+	* Invariant: Either
+	* 1. head = nullptr, or
+	* 2. head = tail, or
+	* 3. head reaches tail in finite steps
 	*/
 	template <typename T>
 	class list final
@@ -101,23 +102,23 @@ namespace ghl
 		~list() {}
 #pragma endregion
 
+	public:
 #pragma region iterator
 		// a partially random access (not fully satisfies LegacyRandomAccessIterator) iter
 		// which participates in owning the object it refers to
 		struct iterator
 		{
-			// does not allow default iterator
-			iterator() = delete;
-			iterator(const std::shared_ptr<node>& nn) : n(nn) {};
+			iterator() : n(nullptr) {}
+			iterator(const std::shared_ptr<node>& nn, bool is_end = false) : n(nn), b_end(is_end) {}
 
-			iterator(const iterator& other) : n(other.n) {}
-			iterator(iterator&& other) : n(std::move(other.n)) {}
+			iterator(const iterator& other) : n(other.n), b_end(other.b_end) {}
+			iterator(iterator&& other) : n(std::move(other.n)), b_end(other.b_end) {}
 
-			inline iterator& operator=(const iterator& right) noexcept { n = right.n; return *this; }
-			inline iterator& operator=(iterator&& right) noexcept { n = std::move(right.n); return *this; }
+			inline iterator& operator=(const iterator& right) noexcept { n = right.n; b_end = right.b_end; return *this; }
+			inline iterator& operator=(iterator&& right) noexcept { n = std::move(right.n); b_end = right.b_end; return *this; }
 
-			inline bool operator==(const iterator& right) const { return n == right.n; }
-			inline bool operator!=(const iterator& right) const { return n != right.n; }
+			inline bool operator==(const iterator& right) const { return n == right.n && b_end == right.b_end; }
+			inline bool operator!=(const iterator& right) const { return n != right.n || b_end != right.b_end; }
 
 			// define it as non-const so that only non-const iterator can call it
 			inline T& operator*() { return *(n->obj); }
@@ -125,12 +126,18 @@ namespace ghl
 			inline T* operator->() { return n->obj.get(); }
 			inline const T* operator->() const { return n->obj.get(); }
 
+			bool valid() const { return nullptr != n; }
+
 			// prefix
 			iterator& operator++() 
 			{ 
 				if (n->has_next())
 				{
 					n = n->next;
+				}
+				else // moving tail forward once results into end
+				{
+					b_end = true;
 				}
 				return *this; 
 			}
@@ -142,13 +149,21 @@ namespace ghl
 				{
 					n = n->next;
 				}
+				else // moving tail forward once results into end
+				{
+					b_end = true;
+				}
 				return temp;
 			}
 
 			// prefix
 			iterator& operator--()
 			{
-				if (n->has_prev())
+				if (b_end) // moving tail forward once results into end
+				{
+					b_end = false;
+				}
+				else
 				{
 					n = n->prev.lock();
 				}
@@ -158,7 +173,11 @@ namespace ghl
 			iterator operator--(int)
 			{
 				auto temp = *this;
-				if (n->has_prev())
+				if (b_end) // moving tail forward once results into end
+				{
+					b_end = false;
+				}
+				else
 				{
 					n = n->prev.lock();
 				}
@@ -173,6 +192,7 @@ namespace ghl
 			size_t operator-(const iterator& right) const
 			{
 				size_t dist = 0;
+
 				/*
 				* Why we use -- not ++ here 
 				* Well that's because (if right = end) end()->prev = tail but tail->next = nullptr, and we can only go backwards by having
@@ -189,7 +209,7 @@ namespace ghl
 			* The user should guarantee that the result is with in [begin,end).
 			* Otherwise, the behaviour is undefined.
 			*/
-			iterator operator+(size_t offset)
+			iterator operator+(size_t offset) const
 			{
 				auto res = *this;
 				for (size_t i = 0; i != offset; ++i)
@@ -204,7 +224,7 @@ namespace ghl
 			* The user should guarantee that the result is with in [begin,end).
 			* Otherwise, the behaviour is undefined.
 			*/
-			iterator operator-(size_t offset)
+			iterator operator-(size_t offset) const
 			{
 				auto res = *this;
 				for (size_t i = 0; i != offset; ++i)
@@ -214,21 +234,56 @@ namespace ghl
 				return res;
 			}
 
+			// marks if the iterator is obtained by incrementing tail once
+			// an end iter is the iter whose n is tail and whose b_end is true
+			bool b_end = false;
 			std::shared_ptr<node> n;
 		};
 
 		// const_iterator and iterator only differs in operator*, which we overloaded to support this.
 		using const_iterator = const iterator;
 
-		iterator begin() { return iterator(head); }
-		iterator end() { return iterator(std::make_shared<node>(nullptr, tail)); /* make a new node whose prev is tail */ }
+		iterator begin() { return empty() ? end() : iterator(head); }
+		iterator end() { return iterator(tail.lock(), true); } /* make a new node whose prev is tail */
 
-		const_iterator cbegin() const { return (const_iterator)iterator(head); }
-		const_iterator cend() const { return (const_iterator)iterator(std::make_shared<node>(nullptr, tail)); /* make a new node whose prev is tail */ }
+		const_iterator cbegin() const { return empty() ? cend() : const_iterator(iterator(head)); }
+		const_iterator cend() const { return (const_iterator)iterator(tail.lock(), true); } /* make a new node whose prev is tail */
 #pragma endregion
 
 	public:
 #pragma region operations
+		/*
+		* Checks the invariant
+		* 
+		* Warning: High runtime cost, should only be used in tests
+		*/
+		bool check_rep() const
+		{
+			if (nullptr == head)
+			{
+				return true;
+			}
+			else if (head == tail.lock())
+			{
+				return true;
+			}
+			else
+			{
+				std::weak_ptr<node> curr = head;
+				while (curr.lock() != tail.lock())
+				{
+					curr = curr.lock()->next;
+					if (curr.expired())
+					{
+						return false;
+					}
+				}
+				return true;
+			}
+
+			return false;
+		}
+
 		inline bool empty() const { return nullptr == head; }
 
 		T& front() { return *(head->obj); }
@@ -260,6 +315,9 @@ namespace ghl
 		*/
 		iterator insert(iterator pos, const T& ele)
 		{
+			// if inserting before end, tail has to be updated
+			// if inserting before head, head has to be updated
+
 			// before
 			// prev <-> (pos.n) <-> next
 			// if pos is begin, then it's like
@@ -269,34 +327,55 @@ namespace ghl
 
 			if (!empty()) // not empty
 			{
-				// make a new node that connects pos.n->prev and pos.n
-				auto new_node = std::make_shared<node>(new T(ele), pos.n->prev, pos.n);
-
-				/* now   new
-				*     /		 \
-				*   prev <-> (pos.n) <-> next
-				*/
-
-				// unlink pos.n->prev and relink it to the new node
-				// becaues new_node owns pos.n, it won't be released during the unlinking
-				pos.n->prev = new_node;
-				// unlink pos.n->prev->next (now new_node->prev->next) if it has a prev, and relink it to the new node
-				if (new_node->has_prev())
+				if (pos.b_end) // pos is end
 				{
-					new_node->prev.lock()->next = new_node;
+					auto new_node = std::make_shared<node>(new T(ele), tail, nullptr);
+
+					tail.lock()->next = new_node;
+					tail = new_node;
+
+					return iterator(tail.lock());
 				}
+				else if (pos.n == head) // pos is head
+				{
+					auto new_node = std::make_shared<node>(new T(ele), std::shared_ptr<node>(), head);
 
-				/* now  new
-				*     /|   |\
-				*   prev   (pos.n) <-> next
-				*/
+					head->prev = new_node;
+					head = new_node;
 
-				return iterator(new_node);
+					return iterator(head);
+				}
+				else
+				{
+					// make a new node that connects pos.n->prev and pos.n
+					auto new_node = std::make_shared<node>(new T(ele), pos.n->prev, pos.n);
+
+					/* now   new
+					*     /		 \
+					*   prev <-> (pos.n) <-> next
+					*/
+
+					// unlink pos.n->prev and relink it to the new node
+					// becaues new_node owns pos.n, it won't be released during the unlinking
+					pos.n->prev = new_node;
+					// unlink pos.n->prev->next (now new_node->prev->next) if it has a prev, and relink it to the new node
+					if (new_node->has_prev())
+					{
+						new_node->prev.lock()->next = new_node;
+					}
+
+					/* now  new
+					*     /|   |\
+					*   prev   (pos.n) <-> next
+					*/
+
+					return iterator(new_node);
+				}
 			}
 			else // if it is empty, then we can assume that pos = begin or pos = end. Either way, we make head and tail the element.
 			{
 				// make a new node that connects pos.n->prev and pos.n
-				tail = head = std::make_shared<node>(new T(ele));
+				tail = (head = std::make_shared<node>(new T(ele)));
 
 				return iterator(head);
 			}
@@ -321,6 +400,9 @@ namespace ghl
 		template <typename... P>
 		iterator emplace(iterator pos, P&&... args)
 		{
+			// if inserting before end, tail has to be updated
+			// if inserting before head, head has to be updated
+
 			// before
 			// prev <-> (pos.n) <-> next
 			// if pos is begin, then it's like
@@ -330,34 +412,55 @@ namespace ghl
 
 			if (!empty()) // not empty
 			{
-				// make a new node that connects pos.n->prev and pos.n
-				auto new_node = std::make_shared<node>(new T(std::forward<P>(args)...), pos.n->prev, pos.n);
-
-				/* now   new
-				*     /		 \
-				*   prev <-> (pos.n) <-> next
-				*/
-
-				// unlink pos.n->prev and relink it to the new node
-				// becaues new_node owns pos.n, it won't be released during the unlinking
-				pos.n->prev = new_node;
-				// unlink pos.n->prev->next (now new_node->prev->next) if it has a prev, and relink it to the new node
-				if (new_node->has_prev())
+				if (pos.b_end) // pos is end
 				{
-					new_node->prev.lock()->next = new_node;
+					auto new_node = std::make_shared<node>(new T(std::forward<P>(args)...), tail, nullptr);
+
+					tail.lock()->next = new_node;
+					tail = new_node;
+
+					return iterator(tail.lock());
 				}
+				else if (pos.n == head) // pos is head
+				{
+					auto new_node = std::make_shared<node>(new T(std::forward<P>(args)...), std::shared_ptr<node>(), head);
 
-				/* now  new
-				*     /|   |\
-				*   prev   (pos.n) <-> next
-				*/
+					head->prev = new_node;
+					head = new_node;
 
-				return iterator(new_node);
+					return iterator(head);
+				}
+				else
+				{
+					// make a new node that connects pos.n->prev and pos.n
+					auto new_node = std::make_shared<node>(new T(std::forward<P>(args)...), pos.n->prev, pos.n);
+
+					/* now   new
+					*     /		 \
+					*   prev <-> (pos.n) <-> next
+					*/
+
+					// unlink pos.n->prev and relink it to the new node
+					// becaues new_node owns pos.n, it won't be released during the unlinking
+					pos.n->prev = new_node;
+					// unlink pos.n->prev->next (now new_node->prev->next) if it has a prev, and relink it to the new node
+					if (new_node->has_prev())
+					{
+						new_node->prev.lock()->next = new_node;
+					}
+
+					/* now  new
+					*     /|   |\
+					*   prev   (pos.n) <-> next
+					*/
+
+					return iterator(new_node);
+				}
 			}
 			else // if it is empty, then we can assume that pos = begin or pos = end. Either way, we make head and tail the element.
 			{
 				// make a new node that connects pos.n->prev and pos.n
-				tail = head = std::make_shared<node>(new T(std::forward<P>(args)...));
+				tail = (head = std::make_shared<node>(new T(std::forward<P>(args)...)));
 
 				return iterator(head);
 			}
@@ -383,55 +486,80 @@ namespace ghl
 
 		/*
 		* Remove the element at pos
-		* position must be in [begin, end). Otherwise, the behaviour is undefined.
+		* If the list is not empty, then pos must be in [begin, end). Otherwise, the behaviour is undefined.
+		* 
+		* @returns iterator (could be end) to the next element of pos (before removing), or end if empty or pos is end.
 		*/
-		void remove(iterator pos)
+		iterator remove(iterator pos)
 		{
-			if (!empty())
+			// if removing head or tail, it needs to be updated
+
+			if (!empty() && pos.b_end != true)
 			{
-				auto shared_tail = tail.lock();
-				if (shared_tail == pos.n) // we are removing tail
+				bool b_is_tail;
+				if (b_is_tail = !(pos.n->has_next())) // pos.n == tail
 				{
-					tail = shared_tail->prev;
+					tail = tail.lock()->prev;
 				}
-
-				if (pos.n->has_prev())
-				{
-					// unlink pos.n->prev->next and relink it to pos.n->next
-					pos.n->prev.lock()->next = pos.n->next;
-				}
-
-				if (pos.n->has_next())
+				else // pos.n != tail
 				{
 					// unlink pos.n->next->prev and relink it to pos.n->prev
 					pos.n->next->prev = pos.n->prev;
 				}
 
-				// After this, all references to pos.n are gone, and pos.n will be destroyed by shared_ptr when all iterators  are destroyed.
+				bool b_is_head;
+				if (b_is_head = !(pos.n->has_prev()))
+				{
+					if (b_is_tail) // if both head and tail, after removing the list will be empty
+					{
+						tail = (head = nullptr);
+					}
+					else
+					{
+						head = pos.n->next;
+					}
+				}
+				else
+				{
+					// unlink pos.n->prev->next and relink it to pos.n->next
+					(pos.n->prev).lock()->next = pos.n->next;
+				}
+
+				if (b_is_tail)
+				{
+					return end();
+				}
+				if(b_is_head)
+				{
+					return iterator(head);
+				}
+				else
+				{
+					return (pos.n->prev).lock()->next;
+				}
 			}
+
+			return end();
 		}
 
 		/*
 		* Insert the element at begin
 		*/
-		inline void remove_front()
+		inline iterator remove_front()
 		{
-			remove(begin());
+			return remove(begin());
 		}
 
 		/*
 		* Insert the element before end
 		*/
-		inline void remove_back()
+		inline iterator remove_back()
 		{
-			remove(iterator(tail.lock()));
+			return remove(iterator(tail.lock()));
 		}
 #pragma endregion
 
 	private:
-		// to avoid circular ownership, only head owns the node (and thus owns the list)
-		// However, the ownership maybe shared by iteraters, which has a side effect.
-		// See the comment of this class.
 		std::shared_ptr<node> head = nullptr;
 		std::weak_ptr<node> tail;
 	};

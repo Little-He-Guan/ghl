@@ -216,6 +216,11 @@ DEFINE_TEST_CASE(test_vector_resize)
 	ASSERT_EQUALS(2, v1[1], "expected to have the elements unchanged")
 	ASSERT_EQUALS(3, v1[2], "expected to have the elements unchanged")
 
+	// vector of only copyable elements
+	ghl::vector<ghl::test_class_copy> vc{ ghl::test_class_copy{1},ghl::test_class_copy{2} };
+	// should compile
+	vc.resize(5);
+
 ENDDEF_TEST_CASE
 
 DEFINE_TEST_CASE(test_vector_push_back)

@@ -12,7 +12,6 @@ namespace ghl
 	* A vector (an array) of multiple objects of the same type T,
 	* which must be : 
 	* Cpp17CopyConstructible, 
-	* Cpp17MoveConstructible (used for moving objects when allocating a new buffer), 
 	* and Cpp17Destructible
 	*
 	* Rep Invariant:
@@ -269,7 +268,7 @@ namespace ghl
 					// move previous objects to the new location
 					for (size_t i = 0; i != m_size; ++i)
 					{
-						new (new_start + i) T(std::move(*(mp_start + i)));
+						new (new_start + i) T(*(mp_start + i));
 					}
 
 					m_capacity = new_size;
@@ -321,7 +320,7 @@ namespace ghl
 					// move previous objects to the new location
 					for (size_t i = 0; i != m_capacity; ++i)
 					{
-						new (new_start + i) T(std::move(*(mp_start + i)));
+						new (new_start + i) T(*(mp_start + i));
 					}
 
 					// free all previous elements
@@ -381,7 +380,7 @@ namespace ghl
 					// move previous objects to the new location
 					for (size_t i = 0; i != m_capacity; ++i)
 					{
-						new (new_start + i) T(std::move(*(mp_start + i)));
+						new (new_start + i) T(*(mp_start + i));
 					}
 
 					// free all previous elements

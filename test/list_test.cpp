@@ -46,6 +46,8 @@ DEFINE_TEST_CASE(test_list_ctor_default)
 
 	ghl::list<int> l;
 
+	ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
 	ASSERT_EQUALS(nullptr, ghl::list_tester::head(l), "expected to have a nullptr head")
 	ASSERT_EQUALS(nullptr, ghl::list_tester::tail(l).lock(), "expected to have a nullptr tail")
 
@@ -57,6 +59,8 @@ DEFINE_TEST_CASE(test_list_ctor_list)
 	{
 		ghl::list<int> l{std::initializer_list<int>()};
 
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
 		ASSERT_EQUALS(nullptr, ghl::list_tester::head(l), "expected to have a nullptr head")
 		ASSERT_EQUALS(nullptr, ghl::list_tester::tail(l).lock(), "expected to have a nullptr tail")
 	}
@@ -64,6 +68,8 @@ DEFINE_TEST_CASE(test_list_ctor_list)
 	// non-empty list
 	{
 		ghl::list<int> l{ 1,2,3 };
+
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
 
 		ASSERT_TRUE(nullptr != ghl::list_tester::head(l), "expected to have a non-nullptr head")
 		ASSERT_TRUE(nullptr != ghl::list_tester::tail(l).lock(), "expected to have a non-nullptr tail")
@@ -83,6 +89,8 @@ DEFINE_TEST_CASE(test_list_ctor_iter)
 		ghl::vector<int> v;
 		ghl::list<int> l{v.begin(),v.end()};
 
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
 		ASSERT_EQUALS(nullptr, ghl::list_tester::head(l), "expected to have a nullptr head")
 		ASSERT_EQUALS(nullptr, ghl::list_tester::tail(l).lock(), "expected to have a nullptr tail")
 	}
@@ -91,6 +99,8 @@ DEFINE_TEST_CASE(test_list_ctor_iter)
 	{
 		ghl::vector<int> v{1,2,3};
 		ghl::list<int> l{ v.begin(),v.end() };
+
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
 
 		ASSERT_TRUE(nullptr != ghl::list_tester::head(l), "expected to have a non-nullptr head")
 		ASSERT_TRUE(nullptr != ghl::list_tester::tail(l).lock(), "expected to have a non-nullptr tail")
@@ -204,6 +214,11 @@ DEFINE_TEST_CASE(test_list_iter_dist)
 	ASSERT_EQUALS(3, e-(b+2), "expected to have the dist correct")
 	ASSERT_EQUALS(4, (e-1) - b, "expected to have the dist correct")
 
+	ghl::list<int> l1;
+	l1.emplace_back(1); l1.emplace_back(2);
+
+	ASSERT_EQUALS(2, l1.size(), "expected to have the dist correct")
+
 ENDDEF_TEST_CASE
 
 // ensures that an iter's existance prevents an obj from being destructed
@@ -247,6 +262,8 @@ DEFINE_TEST_CASE(test_list_insert)
 		ghl::list<int> l;
 		auto i = l.insert_front(3);
 
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
 		ASSERT_FALSE(l.empty(), "the list should not be empty now")
 		ASSERT_EQUALS(3, *i, "expected to return the inserted element")
 	}
@@ -256,6 +273,8 @@ DEFINE_TEST_CASE(test_list_insert)
 		ghl::list<int> l{ 1,2,3 };
 		auto i = l.begin() + 1;
 		auto ret = l.insert(i, 5);
+
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
 
 		ASSERT_EQUALS(4, l.size(), "the list should grow")
 		ASSERT_EQUALS(5, *ret, "expected to return the inserted element")
@@ -269,11 +288,15 @@ DEFINE_TEST_CASE(test_list_emplace)
 	// emplace on empty list
 	{
 		ghl::list<ghl::test_class_copy_move> l;
-		auto i = l.emplace_back(1);
+		auto i1 = l.emplace_back(1);
+
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
 
 		ASSERT_FALSE(l.empty(), "the list should not be empty now")
-		ASSERT_EQUALS(1, i->val, "expected to return the inserted element")
-		ASSERT_TRUE(i->b_constructed_normally, "expected to have the obj directly constructed")
+		ASSERT_EQUALS(1, l.size(), "expected to have the size changed to 1")
+
+		ASSERT_EQUALS(1, i1->val, "expected to return the inserted element")
+		ASSERT_TRUE(i1->b_constructed_normally, "expected to have the obj directly constructed")
 	}
 
 	// insert on non-empty list
@@ -281,6 +304,8 @@ DEFINE_TEST_CASE(test_list_emplace)
 		ghl::list<ghl::test_class_copy_move> l{ ghl::test_class_copy_move(2),ghl::test_class_copy_move(3),ghl::test_class_copy_move(4) };
 		auto i = l.begin() + 1;
 		auto ret = l.emplace(i,5);
+
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
 
 		ASSERT_EQUALS(4, l.size(), "the list should grow")
 		ASSERT_EQUALS(5, ret->val, "expected to return the inserted element")
@@ -296,6 +321,8 @@ DEFINE_TEST_CASE(test_list_remove)
 	{
 		ghl::list<int> l;
 
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
 		l.remove_front();
 		ASSERT_TRUE(l.empty(), "expected to do nothing")
 
@@ -307,21 +334,68 @@ DEFINE_TEST_CASE(test_list_remove)
 	{
 		ghl::list<int> l{ 2,3,4,5 };
 
-		l.remove_back();
+		ASSERT_TRUE(l.check_rep(), "expected to have the invariant held")
+
+		auto i = l.remove_back();
 		ASSERT_EQUALS(3, l.size(), "the list should shrink")
 		ASSERT_EQUALS(2,*l.begin(),"expected to have the other objs unchanged")
 		ASSERT_EQUALS(3, *(l.begin()+1), "expected to have the other objs unchanged")
 		ASSERT_EQUALS(4, *(l.begin()+2), "expected to have the other objs unchanged")
+		ASSERT_EQUALS(l.end(), i, "expected to get end() after removing back")
 
-		l.remove(l.begin()+1);
+		i = l.remove(l.begin()+1);
 		ASSERT_EQUALS(2, l.size(), "the list should shrink")
 		ASSERT_EQUALS(2, *l.begin(), "expected to have the other objs unchanged")
 		ASSERT_EQUALS(4, *(l.begin() + 1), "expected to have the other objs unchanged")
+		ASSERT_EQUALS(*i ,4, "expected to get the next ele")
 	}
 
 ENDDEF_TEST_CASE
 
 #pragma endregion
+
+DEFINE_TEST_CASE(test_list_prev_bugs) // make sure prev bugs do not happen again
+
+	// first bug: insert/emplace before end or before head for an non-empty set
+	//				does not update head or tail properly
+	{
+		ghl::list<int> l{ 1,2 };
+
+		l.insert_front(0);
+		ASSERT_EQUALS(3, l.size(), "expected to increase the size")
+		ASSERT_EQUALS(0, ghl::list_tester::head(l)->get_obj(), "expected to have head point to the newly added obj")
+
+		l.insert_back(3);
+		ASSERT_EQUALS(4, l.size(), "expected to increase the size")
+		ASSERT_EQUALS(3, ghl::list_tester::tail(l).lock()->get_obj(), "expected to have head point to the newly added obj")
+
+		l.emplace_front(-1);
+		ASSERT_EQUALS(5, l.size(), "expected to increase the size")
+		ASSERT_EQUALS(-1, ghl::list_tester::head(l)->get_obj(), "expected to have head point to the newly added obj")
+
+		l.emplace_back(4);
+		ASSERT_EQUALS(6, l.size(), "expected to increase the size")
+		ASSERT_EQUALS(4, ghl::list_tester::tail(l).lock()->get_obj(), "expected to have head point to the newly added obj")
+	}
+
+	// second bug removing head or tail does not update it properly
+	{
+		ghl::list<int> l{ 1,2,3 };
+
+		l.remove_back();
+		ASSERT_EQUALS(2, l.size(), "expected to decrease the size")
+		ASSERT_EQUALS(2, ghl::list_tester::tail(l).lock()->get_obj(), "expected to have tail updated")
+
+		l.remove_front();
+		ASSERT_EQUALS(1, l.size(), "expected to decrease the size")
+		ASSERT_EQUALS(2, ghl::list_tester::head(l)->get_obj(), "expected to have head updated")
+
+		// now head = tail, after removing l should be empty
+		l.remove_back();
+		ASSERT_TRUE(l.empty(), "expected to be empty")
+	}
+
+ENDDEF_TEST_CASE
 
 void test_list()
 {
@@ -361,6 +435,14 @@ void test_list()
 		"test cases for list operations"
 	};
 
+	ghl::test_unit prev_bugs
+	{
+		{
+			&test_list_prev_bugs
+		},
+		"test cases for previous bugs"
+	};
+
 	ctor_and_dtor.execute();
 	std::cout << ctor_and_dtor.get_msg() << "\n";
 
@@ -369,4 +451,7 @@ void test_list()
 
 	oper.execute();
 	std::cout << oper.get_msg() << "\n";
+
+	prev_bugs.execute();
+	std::cout << prev_bugs.get_msg() << "\n";
 }

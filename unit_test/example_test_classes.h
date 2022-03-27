@@ -40,4 +40,30 @@ namespace ghl
 		bool b_copy_constructed = false;
 		bool b_move_constructed = false;
 	};
+
+	/*
+	* A Cpp17CopyConstructible, and Cpp17Destructible type
+	*/
+	class test_class_copy
+	{
+	public:
+		explicit test_class_copy(int value) :
+			val(value),
+			b_constructed_normally(true)
+		{}
+
+		test_class_copy(const test_class_copy& other) noexcept :
+			val(other.val),
+			b_copy_constructed(true)
+		{}
+		test_class_copy(test_class_copy&& other) = delete;
+
+		~test_class_copy() noexcept {}
+
+	public:
+		int val;
+		// true iff constructed not by copy ctor
+		bool b_constructed_normally = false;
+		bool b_copy_constructed = false;
+	};
 }
