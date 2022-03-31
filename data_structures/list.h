@@ -11,7 +11,8 @@ namespace ghl
 	* 
 	* Features:
 	* 1. constant time insertion and deletion at random position
-	* 2. const list is immutable, which does not allow modifications to its elements
+	* 2. const list is immutable, which does not allow modifications to its elements (if not counting iterators)
+	* 3. As long as there are iterators pointing to a node, it is not destroyed (achieved by shared_ptr)
 	* 
 	* Thread-safety: No
 	* 
@@ -106,6 +107,140 @@ namespace ghl
 #pragma region iterator
 		// a partially random access (not fully satisfies LegacyRandomAccessIterator) iter
 		// which participates in owning the object it refers to
+		struct const_iterator
+		{
+			const_iterator() : n(nullptr) {}
+			const_iterator(const std::shared_ptr<node>& nn, bool is_end = false) : n(nn), b_end(is_end) {}
+
+			const_iterator(const const_iterator& other) : n(other.n), b_end(other.b_end) {}
+			const_iterator(const_iterator&& other) : n(std::move(other.n)), b_end(other.b_end) {}
+
+			inline const_iterator& operator=(const const_iterator& right) noexcept { n = right.n; b_end = right.b_end; return *this; }
+			inline const_iterator& operator=(const_iterator&& right) noexcept { n = std::move(right.n); b_end = right.b_end; return *this; }
+
+			inline bool operator==(const const_iterator& right) const { return n == right.n && b_end == right.b_end; }
+			inline bool operator!=(const const_iterator& right) const { return n != right.n || b_end != right.b_end; }
+
+			// define it as non-const so that only non-const iterator can call it
+			inline const T& operator*() const { return *(n->obj); }
+			inline const T* operator->() const { return n->obj.get(); }
+
+			bool valid() const { return nullptr != n; }
+
+			// prefix
+			const_iterator& operator++()
+			{
+				if (n->has_next())
+				{
+					n = n->next;
+				}
+				else // moving tail forward once results into end
+				{
+					b_end = true;
+				}
+				return *this;
+			}
+			// postfix
+			const_iterator operator++(int)
+			{
+				auto temp = *this;
+				if (n->has_next())
+				{
+					n = n->next;
+				}
+				else // moving tail forward once results into end
+				{
+					b_end = true;
+				}
+				return temp;
+			}
+
+			// prefix
+			const_iterator& operator--()
+			{
+				if (b_end) // moving tail forward once results into end
+				{
+					b_end = false;
+				}
+				else
+				{
+					n = n->prev.lock();
+				}
+				return *this;
+			}
+			// postfix
+			const_iterator operator--(int)
+			{
+				auto temp = *this;
+				if (b_end) // moving tail forward once results into end
+				{
+					b_end = false;
+				}
+				else
+				{
+					n = n->prev.lock();
+				}
+				return temp;
+			}
+
+			/*
+			* Calculates the distance between this and right,
+			* which must all be in [begin, end], and right must be before or equal to this.
+			* Otherwise, the behaviour is undefined.
+			*/
+			size_t operator-(const const_iterator& right) const
+			{
+				size_t dist = 0;
+
+				/*
+				* Why we use -- not ++ here
+				* Well that's because (if right = end) end()->prev = tail but tail->next = nullptr, and we can only go backwards by having
+				*/
+				for (auto i = *this; i != right; --i)
+				{
+					++dist;
+				}
+				return dist;
+			}
+
+			/*
+			* Random access an element at an offset. O(n)
+			* The user should guarantee that the result is with in [begin,end).
+			* Otherwise, the behaviour is undefined.
+			*/
+			const_iterator operator+(size_t offset) const
+			{
+				auto res = *this;
+				for (size_t i = 0; i != offset; ++i)
+				{
+					++res;
+				}
+				return res;
+			}
+
+			/*
+			* Random access an element at an inversed offset. O(n)
+			* The user should guarantee that the result is with in [begin,end).
+			* Otherwise, the behaviour is undefined.
+			*/
+			const_iterator operator-(size_t offset) const
+			{
+				auto res = *this;
+				for (size_t i = 0; i != offset; ++i)
+				{
+					--res;
+				}
+				return res;
+			}
+
+			// marks if the iterator is obtained by incrementing tail once
+			// an end iter is the iter whose n is tail and whose b_end is true
+			bool b_end = false;
+			std::shared_ptr<node> n;
+		};
+
+		// a partially random access (not fully satisfies LegacyRandomAccessIterator) iter
+		// which participates in owning the object it refers to
 		struct iterator
 		{
 			iterator() : n(nullptr) {}
@@ -121,12 +256,12 @@ namespace ghl
 			inline bool operator!=(const iterator& right) const { return n != right.n || b_end != right.b_end; }
 
 			// define it as non-const so that only non-const iterator can call it
-			inline T& operator*() { return *(n->obj); }
-			inline const T& operator*() const { return *(n->obj); }
-			inline T* operator->() { return n->obj.get(); }
-			inline const T* operator->() const { return n->obj.get(); }
+			inline T& operator*() const { return *(n->obj); }
+			inline T* operator->() const { return n->obj.get(); }
 
 			bool valid() const { return nullptr != n; }
+
+			inline operator const_iterator() { return const_iterator(n, b_end); }
 
 			// prefix
 			iterator& operator++() 
@@ -240,14 +375,13 @@ namespace ghl
 			std::shared_ptr<node> n;
 		};
 
-		// const_iterator and iterator only differs in operator*, which we overloaded to support this.
-		using const_iterator = const iterator;
-
 		iterator begin() { return empty() ? end() : iterator(head); }
-		iterator end() { return iterator(tail.lock(), true); } /* make a new node whose prev is tail */
+		iterator end() { return iterator(tail.lock(), true); }
+		const_iterator begin() const { return cbegin(); }
+		const_iterator end() const { return cend(); }
 
 		const_iterator cbegin() const { return empty() ? cend() : const_iterator(iterator(head)); }
-		const_iterator cend() const { return (const_iterator)iterator(tail.lock(), true); } /* make a new node whose prev is tail */
+		const_iterator cend() const { return const_iterator(tail.lock(), true); }
 #pragma endregion
 
 	public:

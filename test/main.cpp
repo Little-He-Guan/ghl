@@ -6,6 +6,7 @@ void test_vector();
 void test_list();
 void test_sortings();
 void test_adj_list_graph_ds();
+void test_dp();
 
 int main()
 {
@@ -16,6 +17,8 @@ int main()
 	//test_list();
 
 	test_adj_list_graph_ds();
+
+	//test_dp();
 
 	return 0;
 }

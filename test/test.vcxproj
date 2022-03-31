@@ -141,6 +141,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="adj_list_graph_test.cpp" />
+    <ClCompile Include="dp_test.cpp" />
+    <ClCompile Include="graph_opeations_test.cpp" />
     <ClCompile Include="list_test.cpp" />
     <ClCompile Include="sorting_test.cpp" />
     <ClCompile Include="main.cpp" />

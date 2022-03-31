@@ -18,9 +18,18 @@
     <ClInclude Include="sorting.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="graph_operations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dynamic_programming.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dynamic_programming.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

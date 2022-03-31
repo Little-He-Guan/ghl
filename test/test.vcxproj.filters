@@ -33,5 +33,11 @@
     <ClCompile Include="adj_list_graph_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="graph_opeations_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dp_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

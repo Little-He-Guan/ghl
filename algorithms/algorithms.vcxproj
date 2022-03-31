@@ -19,9 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dynamic_programming.h" />
+    <ClInclude Include="graph_operations.h" />
     <ClInclude Include="sorting.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dynamic_programming.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

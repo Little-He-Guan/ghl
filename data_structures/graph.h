@@ -262,9 +262,32 @@ namespace ghl
 	*		T::obj_t is the type of the object stored in each vertex
 	*		T::weak_ref_t is vertex_weak_ref<T::obj_t>
 	*		T::edge_t is edge<T::obj_t, W>, where W is a known type between the user and the writer of T, which is used for the weight of edges
-	*		T::iterator is a kind of iterator that allows the user to iterate through all vertices directedly connected to a vertex, as mentioned below
+	*		T::iterator is a kind of iterator that allows the user to iterate through all vertices directedly connected to a vertex, as mentioned below.
 	* 2. T should store its vertices via template struct vertex, maintain the info in the struct, 
 	*		return info about vertices in vertex_weak_ref, return info about edges in edge, as mentioned above in the comments of these structs.
+	* 3. operations
+	*		a. given ID and other arguments for constructing a vertex, T provides add_vertex() which takes these arguments and constructs a vertex of ID in the map 
+	*	(if no current vertrices exist with ID). Its return value should be a weak ref to the vertex or to the vertex that blocked the creation
+	*		b. given ID, T provides find_vertex() that finds a vertex of ID and returns a weak ref to it
+	*		c. given ID, T provides remove_vertex() that removes a vertex of ID and returns a boolean that indicates if such a vertex was found and removed.
+	*		d. given the IDs of two vertices, T provides add_edge() that adds an edge of the two vertices (if found), and returns a boolean that indicates if such an edge was added.
+	*		e. given the IDs of two vertices, T provides has_edge() that returns a boolean that indicates if an edge of the two vertices is present
+	*	and get_edge that returns a edge_t representing the edge. 
+	*	note that, if T contains a multigraph, and multiple edges of the same two IDs are present, then it is not specified here which one of them is to be returned.
+	*		f. given the IDs of two vertices, T provides removes_edge() that removes an edge of the two vertices (if found), and returns a boolean that indicates if such an edge was removed
+	*	note that, if T contains a multigraph, and multiple edges of the same two IDs are present, then it is not specified here which one of them is to be removed.
+	*		g. given the ID of a vertex, T provides get_directly_connected_edges() that returns an iterator (to T::edge_t) that iterates throughs all edges that are directedly connected to the vertex
+	*	The iterator must support operator*(), has_next(), next(), is_valid(), and operator++ (prefix and postfix), 
+	*	where next() and ++ forwards the iterator, has_next() indicates if it can still be forwarded, is_valid() indicates if it refers to an valid edge, and operator* gets the edge_t it refers to.
+	*		h. get_all_vertices which takes a reference to a list of weak_ref_t and stored references to all vertices in it
+	*		i. get_all_edges which takes a reference to a list of edge_t and stored references to all edges in it (for undirected maps, all edges are stored twice, with two possible orders of the endpoints)
+	*		j. num_vertices() and num_edges()
+	*		k. empty()
+	*		l. is_undirected()
+	* 4. construction
+	*		T has a default constructor that gives an empty graph
+	*		T has an explicit constructor that takes a boolean to decide if it will be undirected (true) or directed (false)
+	*		
 	* 
 	* Rep Invariant:
 	* Depends on the DS's invariant
@@ -279,14 +302,50 @@ namespace ghl
 		using edge_iter = typename T::iterator;
 
 	public:
-		graph() {}
+		graph() : imp(std::make_unique<T>()) {}
+		graph(bool undirected) : imp(std::make_unique<T>(undirected)) {}
+		template <typename... P>
+		graph(P&& ... args) : imp(std::forward<P>(args)...) {}
+
+		graph(const graph&) = delete;
+		graph(graph&& other) : imp(std::move(other.imp)) {}
+		graph& operator=(graph& r) { imp = std::move(r.imp); return *this; }
+
 		~graph() {}
 
 	public:
+		inline bool empty() const { return imp->empty(); }
+		inline bool is_undirected() const { return imp->is_undirected(); }
+
+		inline size_t num_vertices() const { return imp->num_vertices(); }
+		inline size_t num_edges() const { imp->num_edges(); }
+
+		template <typename ID, typename... P>
+		inline weak_ref_t add_vertex(ID id, P&& ... args) { return imp->add_vertex(id, std::forward<P>(args)...); }
+		template <typename ID>
+		inline bool remove_vertex(ID id) { return imp->remove_vertex(id); }
+		template <typename ID>
+		inline weak_ref_t find_vertex(ID id) const { return imp->find_vertex(id); }
+
+		template <typename ID, typename W>
+		inline bool add_edge(ID left, ID right, W weight) { return imp->add_edge(left, right, weight); }
+		template <typename ID>
+		inline bool has_edge(ID left, ID right) const { return imp->has_edge(left, right); }
+		template <typename ID>
+		inline edge_t get_edge(ID left, ID right) const { return imp->get_edge(left, right); }
+		template <typename ID>
+		inline bool get_edge(ID left, ID right) { return imp->remove_edge(left, right); }
+
+		template <typename ID>
+		inline edge_iter get_directly_connected_edges(ID id) const { return imp->get_directly_connected_edges(id); }
+
+	private:
+		// the actual implementation
+		std::unique_ptr<T> imp;
 	};
 
 	/*
-	* Implementation of a simple graph using adjacency lists
+	* Implementation of a graph using adjacency lists
 	* 
 	* Can be used as either directed and undirected.
 	* If used as directed, then the adj lists contains all vertices a vertex leads to.
@@ -378,7 +437,7 @@ namespace ghl
 		/*
 		* Removes the vertex of id, and all edges connected to it
 		*/
-		void remove_vertex(uint64_t id)
+		bool remove_vertex(uint64_t id)
 		{
 			auto i = vertices_and_lists.find(id);
 
@@ -405,14 +464,18 @@ namespace ghl
 							iter = adj_list.remove(iter); // remove the vertex ref and update iter
 						}
 					}
-				}
 
-				// after all refs are gone, remove the vertex and its adj_list
-				vertices_and_lists.erase(i);
+					// after all refs are gone, remove the vertex and its adj_list
+					vertices_and_lists.erase(i);
+
+					return true;
+				}
+				
+				return false;
 			}
 		}
-		void remove_vertex(const char* name) { remove_vertex(vertex_id::name_to_id(name)); }
-		void remove_vertex(const weak_ref_t& v) { if(v.valid()) remove_vertex(v.observe().id); }
+		bool remove_vertex(const char* name) { return remove_vertex(vertex_id::name_to_id(name)); }
+		bool remove_vertex(const weak_ref_t& v) { return v.valid() ? remove_vertex(v.observe().id) : false; }
 
 		/*
 		* @returns a weak ref to the vertex that has id if found, or an invalid ref otherwise.
@@ -572,56 +635,53 @@ namespace ghl
 			return false;
 		}
 
-	public:
 		/*
-		* iterator to edge_t
-		* 
-		* Note that, it has no operator->, and its operator* returns a value, not a reference, of edge_t
+		* Gives references to all vertices to in_list
 		*/
-		struct iterator
+		void get_all_vertices(ghl::list<weak_ref_t>& in_list)
 		{
-			iterator() {}
-			iterator(const vertex_t in_v, struct ghl::list<vertex_ref>::iterator i) : left_v(in_v), iter(i) {}
-			iterator(weak_ref_t in_v, struct ghl::list<vertex_ref>::iterator i) : left_v(in_v), iter(i) {}
-
-			bool is_valid() const { return iter.valid(); }
-			bool has_next() const { return iter.n->has_next(); }
-
-			// must be used while having next
-			iterator& operator++() { ++iter; return *this; }
-			// must be used while having next
-			iterator operator++(int) { auto i = iter++; return iterator(i); }
-			// must be used while having next
-			iterator next() const { return iterator(iter + 1); }
-
-			// must be used when valid
-			edge_t operator*() const 
+			for (const auto& p : vertices_and_lists)
 			{
-				return edge_t(*(left_v.pv), *(iter->v), iter->weight);
+				in_list.emplace_back(p.first);
 			}
+		}
+		/*
+		* Gives references to all edges to in_list
+		* 
+		* Note that for undirected map, all edges {a,b} are given twice as {a,b} and {b,a}
+		*/
+		void get_all_edges(ghl::list<edge_t>& in_list)
+		{
+			for (const auto& p : vertices_and_lists)
+			{
+				for (const auto& v_ref : p.second)
+				{
+					in_list.emplace_back(p.first, *(v_ref.v), v_ref.weight);
+				}
+			}
+		}
 
-			weak_ref_t left_v;
-			struct ghl::list<vertex_ref>::iterator iter;
-		};
+	public:
 
 		/*
 		* V has to be one of: vertex_t, weak_ref_t, or the types that can result in a vertex id
 		* 
-		* @returns an iterator to the edges directly connected to v (undirected graph);
-		* an iterator to the edges directly comes from v (directed graph)
-		* , or an invalid iter if v is not found.
+		* Fills all edges directly connected to V to list
 		*/
 		template <typename V>
-		iterator get_directly_connected_edges(V v) const
+		void get_directly_connected_edges(V v, ghl::list<edge_t> & list) const
 		{
 			auto i = vertices_and_lists.find(v);
 
 			if (i != vertices_and_lists.end())
 			{
-				return iterator(i->first, const_cast<ghl::list<vertex_ref>&>(i->second).begin());
+				const auto& adj_list = i->second;
+				const auto& v = i->first;
+				for (const auto& v_ref : adj_list)
+				{
+					list.emplace_back(v, *(v_ref.v), v_ref.weight);
+				}
 			}
-
-			return iterator();
 		}
 
 	private:

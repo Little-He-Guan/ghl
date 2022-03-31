@@ -223,6 +223,8 @@ namespace ghl
 
 		iterator begin() { return mp_start; }
 		iterator end() { return mp_start + m_size; }
+		const_iterator begin() const { return cbegin(); }
+		const_iterator end() const { return cend(); }
 
 		const_iterator cbegin() const { return mp_start; }
 		const_iterator cend() const { return mp_start + m_size; }
@@ -296,6 +298,22 @@ namespace ghl
 				mp_start = new_start;
 			}
 		}
+		/*
+		* After a call to resize, which increased the capacity of the vector,
+		* the method may be called to set the size to a higher value.
+		* 
+		* Only sets the size when prev size() <= new_size <= capacity()
+		* 
+		* By calling this, the user guaranteens that all objects between the previous size and the new size are properly constructed,
+		* or at least will be constructed before the next call to the vector's methods.
+		*/
+		void increase_size(size_t new_size)
+		{
+			if (new_size <= m_capacity && m_size < new_size)
+			{
+				m_size = new_size;
+			}
+		}
 
 		/*
 		* Emplaces (constructs) an element at the end of the array (end of capacity) with arguments args...
@@ -361,10 +379,10 @@ namespace ghl
 		/*
 		* Copies or moves obj to the end of the array (end of capacity)
 		*
-		* @param obj the object to be copied/moved. Declared as && to decide to copy or move.
+		* @param obj the object to be copied
 		* @return the iterator to the newly added element if succeeded; otherwise end();
 		*/
-		iterator push_back(T&& obj)
+		iterator push_back(const T& obj)
 		{
 			_ASSERT(check_rep());
 
@@ -396,7 +414,7 @@ namespace ghl
 					}
 
 					// add the new element
-					new (new_start + m_capacity) T(std::forward<T>(obj));
+					new (new_start + m_capacity) T(obj);
 
 					// assign start
 					mp_start = new_start;
@@ -410,7 +428,7 @@ namespace ghl
 			else
 			{
 				// emplace the new element
-				new (mp_start + m_size - 1) T(std::forward<T>(obj));
+				new (mp_start + m_size - 1) T(obj);
 
 				return mp_start + m_size - 1;
 			}

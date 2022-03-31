@@ -391,9 +391,10 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 
 		// graph that has no edges connected to the vertex
 		{
-			auto iter = g.get_directly_connected_edges("a");
+			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
+			g.get_directly_connected_edges("a", edge_list);
 
-			ASSERT_FALSE(iter.is_valid(), "expected to get an invalid iter")
+			ASSERT_TRUE(edge_list.empty(), "expected to get no edge")
 		}
 
 		// graph that has some edges connected to the vertex
@@ -405,39 +406,14 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 			g.add_edge("b", "c");
 			g.add_edge("c", "d");
 
-			auto iter = g.get_directly_connected_edges("a");
+			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
+			g.get_directly_connected_edges("a", edge_list);
 
-			// fill the weights into this list (we don't know the exact order of the edges will be referenced by the iter as an user)
-			// and check them later
-			ghl::list<float> edges;
-			for (;;)
+			auto w_contained_in_list = [edge_list](float w) -> bool
 			{
-				bool b_has_next = iter.has_next();
-
-				if (iter.is_valid())
+				for (auto iter = edge_list.cbegin(); iter != edge_list.cend(); ++iter)
 				{
-					edges.insert_back((*iter).weight);
-				}
-				else
-				{
-					break;
-				}
-
-				if (!b_has_next)
-				{
-					break;
-				}
-				else
-				{
-					++iter;
-				}
-			}
-
-			auto w_contained_in_list = [edges](float w) -> bool
-			{
-				for (auto iter = edges.cbegin(); iter != edges.cend(); ++iter)
-				{
-					if (*iter == w)
+					if (iter->weight == w)
 					{
 						return true;
 					}
@@ -446,7 +422,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 				return false;
 			};
 
-			ASSERT_EQUALS(3, edges.size(), "expected to have exactly 3 edges")
+			ASSERT_EQUALS(3, edge_list.size(), "expected to have exactly 3 edges")
 			ASSERT_TRUE(w_contained_in_list(.1f), "expected to have this edge")
 			ASSERT_TRUE(w_contained_in_list(.2f), "expected to have this edge")
 			ASSERT_TRUE(w_contained_in_list(.3f), "expected to have this edge")
@@ -464,9 +440,10 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 
 		// graph that has no edges connected to the vertex
 		{
-			auto iter = g.get_directly_connected_edges("a");
+			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
+			g.get_directly_connected_edges("a", edge_list);
 
-			ASSERT_FALSE(iter.is_valid(), "expected to get an invalid iter")
+			ASSERT_TRUE(edge_list.empty(), "expected to get no edge")
 		}
 
 		// graph that has some edges connected to the vertex
@@ -479,39 +456,14 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 			g.add_edge("b", "c");
 			g.add_edge("c", "d");
 
-			auto iter = g.get_directly_connected_edges("a");
+			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
+			g.get_directly_connected_edges("a", edge_list);
 
-			// fill the weights into this list (we don't know the exact order of the edges will be referenced by the iter as an user)
-			// and check them later
-			ghl::list<float> edges;
-			for (;;)
+			auto w_contained_in_list = [edge_list](float w) -> bool
 			{
-				bool b_has_next = iter.has_next();
-
-				if (iter.is_valid())
+				for (auto iter = edge_list.cbegin(); iter != edge_list.cend(); ++iter)
 				{
-					edges.insert_back((*iter).weight);
-				}
-				else
-				{
-					break;
-				}
-
-				if (!b_has_next)
-				{
-					break;
-				}
-				else
-				{
-					++iter;
-				}
-			}
-
-			auto w_contained_in_list = [edges](float w) -> bool
-			{
-				for (auto iter = edges.cbegin(); iter != edges.cend(); ++iter)
-				{
-					if (*iter == w)
+					if (iter->weight == w)
 					{
 						return true;
 					}
@@ -520,7 +472,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 				return false;
 			};
 
-			ASSERT_EQUALS(3, edges.size(), "expected to have exactly 3 edges")
+			ASSERT_EQUALS(3, edge_list.size(), "expected to have exactly 3 edges")
 			ASSERT_TRUE(w_contained_in_list(.1f), "expected to have this edge")
 			ASSERT_TRUE(w_contained_in_list(.2f), "expected to have this edge")
 			ASSERT_TRUE(w_contained_in_list(.3f), "expected to have this edge")
