@@ -677,7 +677,7 @@ namespace ghl
 		}
 
 		/*
-		* Insert the element at begin
+		* Remove the element at begin
 		*/
 		inline iterator remove_front()
 		{
@@ -685,7 +685,7 @@ namespace ghl
 		}
 
 		/*
-		* Insert the element before end
+		* Remove the element before end
 		*/
 		inline iterator remove_back()
 		{

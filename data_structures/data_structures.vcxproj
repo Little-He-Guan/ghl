@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="graph.h" />
     <ClInclude Include="list.h" />
+    <ClInclude Include="queue.h" />
     <ClInclude Include="tree.h" />
     <ClInclude Include="vector.h" />
   </ItemGroup>

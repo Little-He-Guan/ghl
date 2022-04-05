@@ -37,6 +37,10 @@ namespace ghl
 		constexpr bool operator<(uint64_t right) const { return id < right; }
 		constexpr bool operator<(const char* right) const { return id < name_to_id(right); }
 
+		constexpr bool operator<=(vertex_id right) const { return id <= right.id; }
+		constexpr bool operator<=(uint64_t right) const { return id <= right; }
+		constexpr bool operator<=(const char* right) const { return id <= name_to_id(right); }
+
 		vertex_id operator=(const vertex_id& right) { id = right.id; }
 		vertex_id operator=(vertex_id&& right) noexcept { id = right.id; right.id = 0; /* Invalidate the moved-from id */ }
 		vertex_id operator=(uint64_t new_id) { id = new_id; }
@@ -71,6 +75,9 @@ namespace ghl
 
 	constexpr bool operator<(uint64_t l, vertex_id r) { return l < r.id; }
 	constexpr bool operator<(const char* l, vertex_id r) { return vertex_id::name_to_id(l) < r.id; }
+
+	constexpr bool operator<=(uint64_t l, vertex_id r) { return l <= r.id; }
+	constexpr bool operator<=(const char* l, vertex_id r) { return vertex_id::name_to_id(l) <= r.id; }
 
 	// forward declaration
 	template <typename T>
@@ -196,6 +203,13 @@ namespace ghl
 	template <typename T, typename ID>
 	bool operator<(ID l, const vertex<T>& r) { return l < r.id; }
 
+	template <typename T>
+	bool operator<=(const vertex<T>& l, const vertex<T>& r) { return l.id <= r.id; }
+	template <typename T, typename ID>
+	bool operator<=(const vertex<T>& l, ID r) { return l.id <= r; }
+	template <typename T, typename ID>
+	bool operator<=(ID l, const vertex<T>& r) { return l <= r.id; }
+
 	template<typename T>
 	inline bool ghl::vertex_weak_ref<T>::operator==(vertex_weak_ref right) const
 	{
@@ -236,6 +250,8 @@ namespace ghl
 			left = right.left; this->right = right.right; weight = right.weight;
 			return *this;
 		}
+
+		bool operator<=(const edge& right) const { return weight <= right.weight; }
 
 		bool valid() const { return left.valid() && right.valid(); }
 
