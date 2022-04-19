@@ -114,8 +114,12 @@ namespace ghl
 		* Gets and removes the largest one
 		*/
 		T pop() { T res(lst.front()); lst.remove_front(); return res; }
+
 		// Performs an insertion according to the order,
 		// like what we do in the insertion sort ( O(n) )
+		// 
+		// If we binary searched the list, it would be O(log n) for the search provided the random access is O(1).
+		// However, since that random access to a list is not O(1), it, generally, may not be faster than doing it this way.
 		void push(const T& obj)
 		{
 			bool bInserted = false;

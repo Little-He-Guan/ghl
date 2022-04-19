@@ -23,23 +23,12 @@ namespace ghl
 		constexpr explicit vertex_id(const char* name) : id(name_to_id(name)) {}
 
 		constexpr vertex_id(const vertex_id& other) : id(other.id) {}
-		constexpr vertex_id(vertex_id&& other) noexcept : id(other.id) { other.id = 0; /* Invalidate the moved-from id */  }
+		constexpr vertex_id(vertex_id&& other) noexcept : id(other.id) { other.id = 0; /* Invalidate the moved-from id */ }
 
-		constexpr bool operator==(vertex_id right) const { return id == right.id; }
-		constexpr bool operator==(uint64_t right) const { return id == right; }
-		constexpr bool operator==(const char* right) const { return id == name_to_id(right); }
-		constexpr bool operator!=(vertex_id right) const { return id != right.id; }
-		constexpr bool operator!=(uint64_t right) const { return id != right; }
-		constexpr bool operator!=(const char* right) const { return id != name_to_id(right); }
-
-		// less might be needed
-		constexpr bool operator<(vertex_id right) const { return id < right.id; }
-		constexpr bool operator<(uint64_t right) const { return id < right; }
-		constexpr bool operator<(const char* right) const { return id < name_to_id(right); }
-
-		constexpr bool operator<=(vertex_id right) const { return id <= right.id; }
-		constexpr bool operator<=(uint64_t right) const { return id <= right; }
-		constexpr bool operator<=(const char* right) const { return id <= name_to_id(right); }
+		constexpr bool operator==(vertex_id r) const { return id == r.id; }
+		constexpr bool operator!=(vertex_id r) const { return id != r.id; }
+		constexpr bool operator<=(vertex_id r) const { return id <= r.id; }
+		constexpr bool operator<(vertex_id r) const { return id < r.id; }
 
 		vertex_id operator=(const vertex_id& right) { id = right.id; }
 		vertex_id operator=(vertex_id&& right) noexcept { id = right.id; right.id = 0; /* Invalidate the moved-from id */ }
@@ -73,11 +62,25 @@ namespace ghl
 		}
 	};
 
-	constexpr bool operator<(uint64_t l, vertex_id r) { return l < r.id; }
-	constexpr bool operator<(const char* l, vertex_id r) { return vertex_id::name_to_id(l) < r.id; }
+	template <typename L>
+	constexpr bool operator==(vertex_id left, L right) { return left == vertex_id(right); }
+	template <typename L>
+	constexpr bool operator==(L left, vertex_id right) { return vertex_id(left) == right; }
 
-	constexpr bool operator<=(uint64_t l, vertex_id r) { return l <= r.id; }
-	constexpr bool operator<=(const char* l, vertex_id r) { return vertex_id::name_to_id(l) <= r.id; }
+	template <typename L>
+	constexpr bool operator!=(vertex_id left, L right) { return left != vertex_id(right); }
+	template <typename L>
+	constexpr bool operator!=(L left, vertex_id right) { return vertex_id(left) != right; }
+
+	template <typename L>
+	constexpr bool operator<=(vertex_id left, L right) { return left <= vertex_id(right); }
+	template <typename L>
+	constexpr bool operator<=(L left, vertex_id right) { return vertex_id(left) <= right; }
+
+	template <typename L>
+	constexpr bool operator<(vertex_id left, L right) { return left < vertex_id(right); }
+	template <typename L>
+	constexpr bool operator<(L left, vertex_id right) { return vertex_id(left) < right; }
 
 	// forward declaration
 	template <typename T>
@@ -98,16 +101,25 @@ namespace ghl
 		vertex_weak_ref(const vertex_weak_ref& other) : pv(other.pv) {}
 		vertex_weak_ref(vertex_weak_ref&& other) : pv(other.pv) {}
 
+		vertex_weak_ref& operator=(const vertex_weak_ref& right) { pv = right.pv; }
+		vertex_weak_ref& operator=(vertex_weak_ref&& right) { pv = right.pv; }
+		vertex_weak_ref& operator=(const vertex<T>& right) { pv = &right; }
+
 		bool valid() const { return nullptr != pv; }
 
-		bool operator==(vertex_weak_ref right) const;
+		bool operator==(const vertex<T>& v) const { return observe() == v; }
+		bool operator==(vertex_weak_ref right) const { return observe() == right.observe(); }
+		bool operator!=(const vertex<T>& v) const { return observe() != v; }
+		bool operator!=(vertex_weak_ref right) const { return observe() != right.observe(); }
+		bool operator<=(const vertex<T>& v) const { return observe() <= v; }
+		bool operator<=(vertex_weak_ref right) const { return observe() <= right.observe(); }
+		bool operator<(const vertex<T>& v) const { return observe() < v; }
+		bool operator<(vertex_weak_ref right) const { return observe() < right.observe(); }
 
 		/*
-		* ID should be comparable with vertex<T>
+		* An valid weak ref is like a vertex in the sense that
+		* it returns a const reference to the vertex it references through observe()
 		*/
-		template <typename ID>
-		bool operator==(ID id) const;
-
 		const vertex<T>& observe() const { return *pv; }
 
 		const vertex<T>* pv = nullptr;
@@ -155,22 +167,30 @@ namespace ghl
 			return *this;
 		}
 
-		// equality is based on id
+		// equality and ordering are based on id
 		bool operator==(const vertex& right) const { return id == right.id; }
+		bool operator==(vertex_weak_ref<T> right) const { return id == right.observe(); }
 		bool operator!=(const vertex& right) const { return id != right.id; }
+		bool operator!=(vertex_weak_ref<T> right) const { return id != right.observe(); }
+		bool operator<=(const vertex& right) const { return id <= right.id; }
+		bool operator<=(vertex_weak_ref<T> right) const { return id <= right.observe(); }
+		bool operator<(const vertex& right) const { return id < right.id; }
+		bool operator<(vertex_weak_ref<T> right) const { return id < right.observe(); }
 
-		bool operator==(vertex_weak_ref<T> right) const { return right.valid() ? *this == right.observe() : false; }
-		bool operator!=(vertex_weak_ref<T> right) const { return right.valid() ? *this != right.observe() : true; }
-		// ID is one of : uint64_t, const char*, vertex_id
+		// we addtionally provides equality and ordering directly with ID
 		template <typename ID>
 		bool operator==(ID right) const { return id == right; }
 		template <typename ID>
 		bool operator!=(ID right) const { return id != right; }
+		template <typename ID>
+		bool operator<=(ID right) const { return id <= right; }
+		template <typename ID>
+		bool operator<(ID right) const { return id < right; }
 
 		// @returns true iff it is not an endpoint of any edge.
 		bool is_isolated() const { return 0 == deg; }
 		// @returns true iff it is valid (a valid id has been given to it)
-		bool is_valid() const { return 0 != id; }
+		bool is_valid() const { return id != (uint64_t)0; }
 
 		// defined as const so an observer can modify the obj from even a const vertex
 		// especially doing so for vertex_weak_ref
@@ -192,36 +212,82 @@ namespace ghl
 		mutable size_t deg = 0;
 
 		// unique identifier of the vertex
-		vertex_id id = 0;
+		vertex_id id;
 	};
 
-	// less might be needed
-	template <typename T>
-	bool operator<(const vertex<T>& l, const vertex<T>& r)  { return l.id < r.id; }
-	template <typename T, typename ID>
-	bool operator<(const vertex<T>& l, ID r) { return l.id < r; }
-	template <typename T, typename ID>
-	bool operator<(ID l, const vertex<T>& r) { return l < r.id; }
+	/*
+	* supports for ID appearing before the operator
+	* 
+	* If ID is one of vertex<T> or vertex_weak_ref<T>, these templates will not be called,
+	* as the non-template operators are prefered to them.
+	*/
 
-	template <typename T>
-	bool operator<=(const vertex<T>& l, const vertex<T>& r) { return l.id <= r.id; }
-	template <typename T, typename ID>
-	bool operator<=(const vertex<T>& l, ID r) { return l.id <= r; }
-	template <typename T, typename ID>
-	bool operator<=(ID l, const vertex<T>& r) { return l <= r.id; }
+	template <typename ID, typename T>
+	bool operator==(ID left, const vertex<T>& right) { return left == right.id; }
+	template <typename ID, typename T>
+	bool operator!=(ID left, const vertex<T>& right) { return left != right.id; }
+	template <typename ID, typename T>
+	bool operator<=(ID left, const vertex<T>& right) { return left <= right.id; }
+	template <typename ID, typename T>
+	bool operator<(ID left, const vertex<T>& right) { return left < right.id; }
 
-	template<typename T>
-	inline bool ghl::vertex_weak_ref<T>::operator==(vertex_weak_ref right) const
+	/*
+	* Vertex that bears no object
+	*/
+	template <>
+	struct vertex<void>
 	{
-		return *pv == *(right.pv);
-	}
+		vertex() {}
+		template <typename ID>
+		vertex(ID in_id) : id(in_id) {}
 
-	template<typename T> 
-	template<typename ID>
-	inline bool ghl::vertex_weak_ref<T>::operator==(ID id) const
-	{
-		return *pv == id;
-	}
+		vertex(const vertex& other) : id(other.id)
+		{
+			deg = other.deg;
+			indeg = other.indeg;
+			outdeg = other.outdeg;
+		}
+		vertex(vertex&& other) noexcept : id(std::move(other.id))
+		{
+			deg = other.deg;
+			indeg = other.indeg;
+			outdeg = other.outdeg;
+		}
+		vertex& operator=(vertex&& right)
+		{
+			id = std::move(right.id);
+
+			deg = right.deg;
+			indeg = right.indeg;
+			outdeg = right.outdeg;
+
+			return *this;
+		}
+
+		// equality is based on id
+		bool operator==(const vertex& right) const { return id == right.id; }
+		bool operator!=(const vertex& right) const { return id != right.id; }
+
+		// @returns true iff it is not an endpoint of any edge.
+		bool is_isolated() const { return 0 == deg; }
+		// @returns true iff it is valid (a valid id has been given to it)
+		bool is_valid() const { return id != (uint64_t)0; }
+
+		// indegree of the vertex (directed)
+		// maintained by different DS individually
+		mutable size_t indeg = 0;
+		// outgree of the vertex (directed)
+		// maintained by different DS individually
+		mutable size_t outdeg = 0;
+		// degree of the vertex (undirected)
+		// maintained by different DS individually
+		mutable size_t deg = 0;
+
+		// unique identifier of the vertex
+		vertex_id id;
+	};
+
+	using pure_vertex = vertex<void>;
 
 	/*
 	* When the user asks for an edge, all implementations should give an edge of an instantiation of this struct
@@ -278,7 +344,6 @@ namespace ghl
 	*		T::obj_t is the type of the object stored in each vertex
 	*		T::weak_ref_t is vertex_weak_ref<T::obj_t>
 	*		T::edge_t is edge<T::obj_t, W>, where W is a known type between the user and the writer of T, which is used for the weight of edges
-	*		T::iterator is a kind of iterator that allows the user to iterate through all vertices directedly connected to a vertex, as mentioned below.
 	* 2. T should store its vertices via template struct vertex, maintain the info in the struct, 
 	*		return info about vertices in vertex_weak_ref, return info about edges in edge, as mentioned above in the comments of these structs.
 	* 3. operations
@@ -292,9 +357,7 @@ namespace ghl
 	*	note that, if T contains a multigraph, and multiple edges of the same two IDs are present, then it is not specified here which one of them is to be returned.
 	*		f. given the IDs of two vertices, T provides removes_edge() that removes an edge of the two vertices (if found), and returns a boolean that indicates if such an edge was removed
 	*	note that, if T contains a multigraph, and multiple edges of the same two IDs are present, then it is not specified here which one of them is to be removed.
-	*		g. given the ID of a vertex, T provides get_directly_connected_edges() that returns an iterator (to T::edge_t) that iterates throughs all edges that are directedly connected to the vertex
-	*	The iterator must support operator*(), has_next(), next(), is_valid(), and operator++ (prefix and postfix), 
-	*	where next() and ++ forwards the iterator, has_next() indicates if it can still be forwarded, is_valid() indicates if it refers to an valid edge, and operator* gets the edge_t it refers to.
+	*		g. given the ID of a vertex, T provides get_adj_in_edges() that fills all vertices adj to the vertex in edges of the passed in list
 	*		h. get_all_vertices which takes a reference to a list of weak_ref_t and stored references to all vertices in it
 	*		i. get_all_edges which takes a reference to a list of edge_t and stored references to all edges in it (for undirected maps, all edges are stored twice, with two possible orders of the endpoints)
 	*		j. num_vertices() and num_edges()
@@ -315,7 +378,6 @@ namespace ghl
 		using obj_t = typename T::obj_t;
 		using weak_ref_t = typename T::weak_ref_t;
 		using edge_t = typename T::edge_t;
-		using edge_iter = typename T::iterator;
 
 	public:
 		graph() : imp(std::make_unique<T>()) {}
@@ -345,6 +407,7 @@ namespace ghl
 
 		template <typename ID, typename W>
 		inline bool add_edge(ID left, ID right, W weight) { return imp->add_edge(left, right, weight); }
+		inline bool add_edge(const edge_t& e) { return imp->add_edge(e); }
 		template <typename ID>
 		inline bool has_edge(ID left, ID right) const { return imp->has_edge(left, right); }
 		template <typename ID>
@@ -353,7 +416,10 @@ namespace ghl
 		inline bool get_edge(ID left, ID right) { return imp->remove_edge(left, right); }
 
 		template <typename ID>
-		inline edge_iter get_directly_connected_edges(ID id) const { return imp->get_directly_connected_edges(id); }
+		inline void get_adj_in_edges(ID id, ghl::list<edge_t>& list) const { return imp->get_adj_in_edges(id, list); }
+
+		inline void get_all_vertices(ghl::list<weak_ref_t>& in_list) const { imp->get_all_vertices(in_list); }
+		inline void get_all_edges(ghl::list<edge_t>& in_list) const { imp->get_all_edges(in_list); }
 
 	private:
 		// the actual implementation
@@ -485,10 +551,10 @@ namespace ghl
 					vertices_and_lists.erase(i);
 
 					return true;
-				}
-				
-				return false;
+				}				
 			}
+
+			return false;
 		}
 		bool remove_vertex(const char* name) { return remove_vertex(vertex_id::name_to_id(name)); }
 		bool remove_vertex(const weak_ref_t& v) { return v.valid() ? remove_vertex(v.observe().id) : false; }
@@ -542,6 +608,16 @@ namespace ghl
 			}
 
 			return false;
+		}
+
+		/*
+		* Adds the edge to the graph
+		* 
+		* @returns true iff the vertices referenced by the edges are present and the edge is added. Otherwise false.
+		*/
+		bool add_edge(const edge_t& e)
+		{
+			add_edge(e.left, e.right, e.weight);
 		}
 
 		/*
@@ -682,10 +758,10 @@ namespace ghl
 		/*
 		* V has to be one of: vertex_t, weak_ref_t, or the types that can result in a vertex id
 		* 
-		* Fills all edges directly connected to V to list
+		* Fills all edges directly connected to V to list (that is, the edges.right will be the vertices adj to v)
 		*/
 		template <typename V>
-		void get_directly_connected_edges(V v, ghl::list<edge_t> & list) const
+		void get_adj_in_edges(V v, ghl::list<edge_t> & list) const
 		{
 			auto i = vertices_and_lists.find(v);
 

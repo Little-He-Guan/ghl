@@ -40,7 +40,7 @@ DEFINE_TEST_CASE(test_adj_graph_add_vertex)
 
 		const auto &v = map.find("a")->first;
 
-		ASSERT_EQUALS(v, a_ref, "expected to have the ref to the added vertex")
+		ASSERT_EQUALS(v, a_ref.observe(), "expected to have the ref to the added vertex")
 		ASSERT_EQUALS(3, *(a_ref.observe().obj), "expected to have the value contained in the vertex correct")
 	}
 
@@ -53,7 +53,7 @@ DEFINE_TEST_CASE(test_adj_graph_add_vertex)
 
 		const auto &v = map.find("b")->first;
 
-		ASSERT_EQUALS(v, b_ref, "expected to have the ref to the added vertex")
+		ASSERT_EQUALS(v, b_ref.observe(), "expected to have the ref to the added vertex")
 		ASSERT_EQUALS(5, *(b_ref.observe().obj), "expected to have the value contained in the vertex correct")
 	}
 
@@ -66,7 +66,7 @@ DEFINE_TEST_CASE(test_adj_graph_add_vertex)
 
 		const auto &v = map.find("a")->first;
 
-		ASSERT_EQUALS(v, a_ref, "expected to have the ref to the original vertex")
+		ASSERT_EQUALS(v, a_ref.observe(), "expected to have the ref to the original vertex")
 		ASSERT_EQUALS(3, *(a_ref.observe().obj), "expected to have the original vertex, not the new one")
 	}
 
@@ -392,7 +392,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 		// graph that has no edges connected to the vertex
 		{
 			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
-			g.get_directly_connected_edges("a", edge_list);
+			g.get_adj_in_edges("a", edge_list);
 
 			ASSERT_TRUE(edge_list.empty(), "expected to get no edge")
 		}
@@ -407,7 +407,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 			g.add_edge("c", "d");
 
 			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
-			g.get_directly_connected_edges("a", edge_list);
+			g.get_adj_in_edges("a", edge_list);
 
 			auto w_contained_in_list = [edge_list](float w) -> bool
 			{
@@ -441,7 +441,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 		// graph that has no edges connected to the vertex
 		{
 			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
-			g.get_directly_connected_edges("a", edge_list);
+			g.get_adj_in_edges("a", edge_list);
 
 			ASSERT_TRUE(edge_list.empty(), "expected to get no edge")
 		}
@@ -457,7 +457,7 @@ DEFINE_TEST_CASE(test_adj_graph_get_directedly_connected_edges)
 			g.add_edge("c", "d");
 
 			ghl::list<typename ghl::adj_list_graph_ds<int>::edge_t> edge_list;
-			g.get_directly_connected_edges("a", edge_list);
+			g.get_adj_in_edges("a", edge_list);
 
 			auto w_contained_in_list = [edge_list](float w) -> bool
 			{
