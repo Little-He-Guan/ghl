@@ -147,6 +147,7 @@
     <ClCompile Include="queue_test.cpp" />
     <ClCompile Include="sorting_test.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="binary_search_tree_test.cpp" />
     <ClCompile Include="tree_test.cpp" />
     <ClCompile Include="vector_test.cpp" />
   </ItemGroup>

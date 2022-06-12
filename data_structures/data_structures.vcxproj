@@ -152,6 +152,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="binary_heap.h" />
+    <ClInclude Include="binary_search_tree.h" />
     <ClInclude Include="graph.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="queue.h" />

@@ -438,7 +438,7 @@ namespace ghl
 
 		/*
 		* Removes the element at the back of the vector, if there is one.
-		* The operation does not shrink the size.
+		* The operation does not shrink the capacity, it only decreases the size.
 		*/
 		void remove_back() noexcept
 		{
