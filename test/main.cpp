@@ -1,6 +1,3 @@
-#include "../unit_test/test_unit.h"
-
-#include <iostream>
 
 void test_vector();
 void test_list();
@@ -8,8 +5,8 @@ void test_sortings();
 void test_adj_list_graph_ds();
 void test_dp();
 void test_queue();
-void test_tree_and_node();
 void test_bst();
+void test_avl_tree();
 
 int main()
 {
@@ -32,9 +29,9 @@ int main()
 	//test_queue();
 
 	// passed
-	//test_tree_and_node();
-
 	test_bst();
+
+	test_avl_tree();
 
 	return 0;
 }

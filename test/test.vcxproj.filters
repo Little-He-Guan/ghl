@@ -42,7 +42,7 @@
     <ClCompile Include="queue_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tree_test.cpp">
+    <ClCompile Include="avl_tree_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

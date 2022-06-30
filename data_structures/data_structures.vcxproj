@@ -152,11 +152,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="avl_tree.h" />
     <ClInclude Include="binary_heap.h" />
     <ClInclude Include="binary_search_tree.h" />
     <ClInclude Include="graph.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="queue.h" />
+    <ClInclude Include="set.h" />
     <ClInclude Include="tree.h" />
     <ClInclude Include="vector.h" />
   </ItemGroup>

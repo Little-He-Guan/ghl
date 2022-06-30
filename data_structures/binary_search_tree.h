@@ -11,18 +11,26 @@ namespace ghl
 	*
 	* Invariant: the binary search tree property.
 	* 
-	* Note: the class owns and manages a binary_tree<T>, but is not a binary_tree<T>
+	* Note: the class manages the elements by holding a **container tree**, whose type is the template parameter Container
+	* By default it's the binary tree.
+	* Under some conditions, it's better to use other special trees (e.g. a tree whose nodes have an additional size attribute to implement an AVL tree)
+	* It is presumed that the container at least supports the same set of operations as a binary_tree does.
 	*/
-	template <typename T>
+	template <typename T, template <typename> class Container = binary_tree>
 	class binary_search_tree
 	{
 	public:
-		binary_search_tree() {}
+		using node_t = Container<T>;
+
+	public:
+		// inits root
+		binary_search_tree() : root(nullptr) {}
+		explicit binary_search_tree(node_t* rt) : root(rt) {}
 		/*
 		* Assumes that the pointers own the elements
 		* After it, the ownerships will be taken
 		*/
-		binary_search_tree(const std::initializer_list<T*>& init_list)
+		binary_search_tree(const std::initializer_list<T*>& init_list) : binary_search_tree()
 		{
 			for (auto* p : init_list)
 			{
@@ -33,17 +41,16 @@ namespace ghl
 		virtual ~binary_search_tree() {}
 
 	protected:
-		std::unique_ptr<binary_tree<T>> root;
-	public:
-		binary_tree<T>* get_root() const { return root.get(); }
+		std::unique_ptr<Container<T>> root;
 
 	public:
-		friend struct iterator;
+		node_t* get_root() const { return root.get(); }
 
+	public:
 		struct iterator
 		{
 			iterator() {}
-			explicit iterator(binary_tree<T>* n) : node(n) {}
+			explicit iterator(node_t* n) : node(n) {}
 			iterator(const iterator& o) : node(o.node) {}
 			iterator(iterator&& o) : node(o.node) {}
 			~iterator() {}
@@ -53,11 +60,12 @@ namespace ghl
 
 			bool valid() const { return node != nullptr ? (!node->empty()) : false; }
 
+			// @returns the iterator to the successor of node if it exists in the tree, or an invalid iter otherwise
 			iterator successor() const
 			{
-				if (node->right() != nullptr)
+				if (node->has_right())
 				{
-					return iterator(binary_search_tree::internal_minimum(node->right()));
+					return iterator(binary_search_tree::internal_minimum(node->right<Container<T>>()));
 				}
 				else
 				{
@@ -65,12 +73,12 @@ namespace ghl
 					// then a bigger value can only be held by some of its parent who's bigger than the branch contains it
 					// (i.e. it or its some parent is a left child of a node)
 
-					binary_tree<T>* child, *parent = node;
+					Container<T>* child, *parent = node;
 					do
 					{
 						child = parent;
-						parent = parent->p;
-					} while (parent != nullptr && child == parent->right()); // go back to its parent until the parent is nullptr or until we have a left child
+						parent = parent->get_parent<Container<T>>();
+					} while (parent != nullptr && child == parent->right<Container<T>>()); // go back to its parent until the parent is nullptr or until we have a left child
 
 					// if parent is not nullptr, it is the first parent that has a left child in the branch
 					// by the property, it is the smallest one bigger than this
@@ -78,11 +86,12 @@ namespace ghl
 					return iterator(parent);
 				}
 			}
+			// @returns the iterator to the predecessor of node if it exists in the tree, or an invalid iter otherwise
 			iterator predecessor() const
 			{
-				if (node->left() != nullptr)
+				if (node->has_left())
 				{
-					return iterator(binary_search_tree::internal_maximum(node->left()));
+					return iterator(binary_search_tree::internal_maximum(node->left<Container<T>>()));
 				}
 				else
 				{
@@ -90,12 +99,12 @@ namespace ghl
 					// then a smaller value can only be held by some of its parent who's bigger than the branch contains it
 					// (i.e. it or its some parent is a right child of a node)
 
-					binary_tree<T>* child, *parent = node;
+					Container<T>* child, *parent = node;
 					do
 					{
 						child = parent;
-						parent = parent->p;
-					} while (parent != nullptr && child == parent->left()); // go back to its parent until the parent is nullptr or until we have a right child
+						parent = parent->get_parent<Container<T>>();
+					} while (parent != nullptr && child == parent->left<Container<T>>()); // go back to its parent until the parent is nullptr or until we have a right child
 
 					return iterator(parent);
 				}
@@ -106,10 +115,10 @@ namespace ghl
 			iterator& operator--() { node = predecessor().node; return *this; }
 			iterator operator--(int) { iterator temp = iterator(node); node = predecessor().node; return temp; }
 
-			binary_tree<T>* operator->() const { return node; }
-			binary_tree<T>& operator*() const { return *node; }
+			Container<T>* operator->() const { return node; }
+			Container<T>& operator*() const { return *node; }
 
-			binary_tree<T>* node = nullptr;
+			Container<T>* node = nullptr;
 		};
 
 		iterator get_root_iter() const { return iterator(root.get()); }
@@ -123,10 +132,9 @@ namespace ghl
 		*/
 		virtual iterator insert(T* ele)
 		{
-			binary_tree<T>* x = root.get();
-			binary_tree<T>* y = nullptr; // parent of x
-			binary_tree<T>* res = nullptr;
-
+			Container<T>* x = root.get();
+			Container<T>* y = nullptr; // parent of x
+			Container<T>* res = nullptr;
 
 			while (x != nullptr)
 			{
@@ -134,30 +142,29 @@ namespace ghl
 
 				if (*ele <= x->get_obj())
 				{
-					x = x->left();
+					x = x->left<Container<T>>();
 				}
 				else
 				{
-					x = x->right();
+					x = x->right<Container<T>>();
 				}
 			}
 			if (nullptr == y) // the tree is empty
 			{
-				root.reset(new binary_tree<T>(nullptr, ele));
+				root.reset(new Container<T>(ele));
+				res = root.get();
 			}
 			else
 			{
 				if (*ele <= y->get_obj())
 				{
-					y->set_left(res = new binary_tree<T>(y, ele));
+					y->set_left(res = new Container<T>(ele, y));
 				}
 				else
 				{
-					y->set_right(res = new binary_tree<T>(y, ele));
+					y->set_right(res = new Container<T>(ele, y));
 				}
 			}
-
-			
 
 			return iterator(res);
 		}
@@ -165,78 +172,20 @@ namespace ghl
 		/*
 		* Removes the element at pos and rearranges the tree so that the property holds
 		* 
+		* Note: if pos is valid but is not in the tree, the behaviour is undefined.
 		* @returns true iff pos is valid and is removed
 		*/
 		virtual bool remove(iterator pos)
 		{
 			if (pos.valid())
 			{
-				binary_tree<T>* node = pos.node;
-
-				// tells if node is its parent's left or right, used in transparent
-				// if node->p is nullptr, then it will be ignored by transplant, and we simply set it to ture then.
-				bool b_node_left_right = node->p != nullptr ? node == node->p->left() : true;
-
-				/*
-				* 1. node has no children. replace it with nullptr in its parent
-				* 2. node has only 1 child. replace it with its only child in its parent.
-				* 3. node has 2 children. replace it with its successor, and rearrange the tree.
-				*/
-
-				if (node->left() == nullptr) // if left is empty, then whether right is empty or not, we can replace node with its right anyway
-				{
-					transplant(node, node->right(), node->p, b_node_left_right);
-				}
-				else if (node->right() == nullptr) // right is empty
-				{
-					transplant(node, node->left(), node->p, b_node_left_right);
-				}
-				else // both children exist
-				{
-					binary_tree<T>* successor = internal_minimum(node->right());
-
-					if (node->right() != successor) // the successor is not node->right
-					{
-						// first remember successor's parent
-						binary_tree<T>* ps = successor->p;
-
-						// the successor must be in a left subtree.
-						// otherwise, it is bigger than its parent, contradicting to it being the successor
-						// now we take ownership of it because we are going to transplant it.
-						successor = successor->p->branches[0].release();
-						// successor is dangling now. Always set a dangling node's parent to nullptr
-						successor->p = nullptr;
-
-						// and we plant the successor's right to successor's previous place (now nullptr)
-						transplant(ps->left(), successor->right(), ps, true);
-
-						// because successor's left must be nullptr,
-						// after the transplanting, successor has no child.
-						// now we transplant node.right to successor.right
-						// and transplant node.left to successor.left
-						transplant(successor->right(), node->right(), successor, false);
-						transplant(successor->left(), node->left(), successor, true);
-
-						// now successor will take node's place
-						transplant(node, successor, node->p, b_node_left_right);
-					}
-					else // the successor is node->right
-					{
-						// we plant node->left to successor's
-						transplant(successor->left(), node->left(), successor, true);
-
-						// and now successor will take node's place
-						transplant(node, successor, node->p, b_node_left_right);
-					}
-				}
-
+				internal_remove(pos.node);
 				return true;
 			}
 			else
 			{
 				return false;
 			}
-			
 		}
 
 		/*
@@ -267,11 +216,11 @@ namespace ghl
 		iterator maximum() const { return iterator(internal_maximum(get_root())); }
 		iterator minimum() const { return iterator(internal_minimum(get_root())); }
 
-	private:
+	protected:
 		// where a reference to the current node is needed, 
 		// we write these internal methods that take an extra argument as the node to do the actual works
 
-		binary_tree<T>* internal_find(binary_tree<T>* node, const T& ele) const
+		static Container<T>* internal_find(Container<T>* node, const T& ele)
 		{
 			while (node != nullptr && node->object_valid())
 			{
@@ -283,11 +232,11 @@ namespace ghl
 				{
 					if (ele <= node->get_obj())
 					{
-						node = node->left();
+						node = node->left<Container<T>>();
 					}
 					else // ele >= node->get_obj() as it's a total ordering
 					{
-						node = node->right();
+						node = node->right<Container<T>>();
 					}
 				}
 			}
@@ -295,7 +244,7 @@ namespace ghl
 			return node;
 		}
 		template <typename Key>
-		binary_tree<T>* internal_find(binary_tree<T>* node, Key k) const
+		static Container<T>* internal_find(Container<T>* node, Key k)
 		{
 			while (node != nullptr && node->p_obj != nullptr)
 			{
@@ -307,11 +256,11 @@ namespace ghl
 				{
 					if (node->get_obj() <= k)
 					{
-						node = node->right();
+						node = node->right<Container<T>>();
 					}
 					else // node->get_obj() >= k as it's a total ordering
 					{
-						node = node->left();
+						node = node->left<Container<T>>();
 					}
 				}
 			}
@@ -319,20 +268,20 @@ namespace ghl
 			return node;
 		}
 
-		static binary_tree<T>* internal_maximum(binary_tree<T>* node)
+		static Container<T>* internal_maximum(Container<T>* node)
 		{
-			while (node->right() != nullptr)
+			while (node->right<Container<T>>() != nullptr)
 			{
-				node = node->right();
+				node = node->right<Container<T>>();
 			}
 
 			return node;
 		}
-		static binary_tree<T>* internal_minimum(binary_tree<T>* node)
+		static Container<T>* internal_minimum(Container<T>* node)
 		{
-			while (node->left() != nullptr)
+			while (node->left<Container<T>>() != nullptr)
 			{
-				node = node->left();
+				node = node->left<Container<T>>();
 			}
 
 			return node;
@@ -351,7 +300,7 @@ namespace ghl
 		* We then add another parameter that tells if u was left or right (true for left, false for right).
 		* If up is nullptr, this parameter is ignored.
 		*/
-		void transplant(binary_tree<T>* u, binary_tree<T>* v, binary_tree<T>* up, bool b_u_left_right)
+		void transplant(Container<T>* u, Container<T>* v, Container<T>* up, bool b_u_left_right)
 		{
 			if (v == nullptr)
 			{
@@ -373,17 +322,17 @@ namespace ghl
 			}
 			else
 			{
-				if (v->p != nullptr)
+				if (v->has_parent())
 				{
 					// first releases the ownership of v's parent to v
 					// to avoid multiple ownerships or 0 ownership
-					if (v == v->p->left())
+					if (v == v->get_parent<Container<T>>()->left<Container<T>>())
 					{
-						v = v->p->branches[0].release();
+						v = v->get_parent<Container<T>>()->release_left();
 					}
 					else
 					{
-						v = v->p->branches[1].release();
+						v = v->get_parent<Container<T>>()->release_right();
 					}
 				}
 
@@ -406,6 +355,78 @@ namespace ghl
 					}
 				}
 			}
+		}
+
+		/*
+		* Note: it assumes that node is not nullptr
+		* 
+		* @returns the pointer to the node that will be in the place where the node to be deleted is now, or
+		* the parent to the place, if the place will become nullptr, or
+		* nullptr if both of the two will be nullptr (that is, when the tree will be empty)
+		*/
+		node_t* internal_remove(node_t* node)
+		{
+			node_t* res;
+
+			// tells if node is its parent's left or right, used in transparent
+			// if node->p is nullptr, then it will be ignored by transplant, and we simply set it to ture then.
+			bool b_node_left_right = node->has_parent() ? node == node->get_parent<Container<T>>()->left<Container<T>>() : true;
+
+			/*
+			* 1. node has no children. replace it with nullptr in its parent
+			* 2. node has only 1 child. replace it with its only child in its parent.
+			* 3. node has 2 children. replace it with its successor, and rearrange the tree.
+			*/
+
+			if (!node->has_left()) // if left is nil, then whether right is nil or not, we can replace node with its right anyway
+			{
+				res = node->has_right() ? node->right<Container<T>>() : node->get_parent<Container<T>>();
+				transplant(node, node->right<Container<T>>(), node->get_parent<Container<T>>(), b_node_left_right);
+			}
+			else if (!node->has_right()) // right is nil
+			{
+				res = node->has_left() ? node->left<Container<T>>() : node->get_parent<Container<T>>();
+				transplant(node, node->left<Container<T>>(), node->get_parent<Container<T>>(), b_node_left_right);
+			}
+			else // both children exist
+			{
+				Container<T>* successor = internal_minimum(node->right<Container<T>>());
+				res = successor != nullptr ? successor : node->get_parent<Container<T>>();
+
+				if (node->right<Container<T>>() != successor) // the successor is not node->right
+				{
+					// first remember successor's parent
+					Container<T>* ps = successor->get_parent<Container<T>>();
+
+					// the successor must be in a left subtree.
+					// otherwise, it is bigger than its parent, contradicting to it being the successor
+					// now we take ownership of it because we are going to transplant it.
+					successor = successor->get_parent<Container<T>>()->release_left();
+
+					// and we plant the successor's right to successor's previous place (now nullptr)
+					transplant(ps->left<Container<T>>(), successor->right<Container<T>>(), ps, true);
+
+					// because successor's left must be nullptr,
+					// after the transplanting, successor has no child.
+					// now we transplant node.right to successor.right
+					// and transplant node.left to successor.left
+					transplant(successor->right<Container<T>>(), node->right<Container<T>>(), successor, false);
+					transplant(successor->left<Container<T>>(), node->left<Container<T>>(), successor, true);
+
+					// now successor will take node's place
+					transplant(node, successor, node->get_parent<Container<T>>(), b_node_left_right);
+				}
+				else // the successor is node->right
+				{
+					// we plant node->left to successor's
+					transplant(successor->left<Container<T>>(), node->left<Container<T>>(), successor, true);
+
+					// and now successor will take node's place
+					transplant(node, successor, node->get_parent<Container<T>>(), b_node_left_right);
+				}
+			}
+
+			return res;
 		}
 	};
 
