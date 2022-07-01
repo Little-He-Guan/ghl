@@ -327,6 +327,19 @@ DEFINE_TEST_CASE(test_avl_tree_remove)
 
 ENDDEF_TEST_CASE
 
+// the bug was caused when a leaf node gets deleted, and the bug would lead to a nullptr reference
+DEFINE_TEST_CASE(test_avl_tree_remove_bug1)
+
+	ghl::avl_tree<int> tree;
+
+	tree.insert(new int(5));
+	tree.insert(new int(3)); // 3 will be a leaf node
+
+	ASSERT_TRUE(tree.remove(3), "expected to return true")
+	ASSERT_FALSE(tree.find(3).valid(), "expected to have the element removed")
+
+ENDDEF_TEST_CASE
+
 void test_avl_tree()
 {
 	ghl::test_unit unit
@@ -334,7 +347,8 @@ void test_avl_tree()
 		{
 			&test_avl_tree_check_imbalance_on_path,
 			&test_avl_tree_insert,
-			&test_avl_tree_remove
+			&test_avl_tree_remove,
+			&test_avl_tree_remove_bug1
 		},
 		"tests for avl tree"
 	};

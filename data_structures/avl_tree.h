@@ -62,14 +62,17 @@ namespace ghl
 		};
 
 	public:
-		iterator insert(T * ele) override
+		iterator insert(T * ele, bool bAllowDuplication = true) override
 		{
-			auto pos = super::insert(ele);
+			auto pos = super::insert(ele, bAllowDuplication);
 			
-			auto info = check_balance_on_path(pos);
-			if (!info.balanced) // the tree is imbalanced, rotate it
+			if (pos.valid())
 			{
-				rotate(info);
+				auto info = check_balance_on_path(pos);
+				if (!info.balanced) // the tree is imbalanced, rotate it
+				{
+					rotate(info);
+				}
 			}
 
 			return pos;

@@ -46,6 +46,8 @@ namespace ghl
 	public:
 		node_t* get_root() const { return root.get(); }
 
+		void set_root(node_t* new_root) { root.reset(new_root); }
+
 	public:
 		struct iterator
 		{
@@ -127,10 +129,13 @@ namespace ghl
 		/*
 		* Insert the element pointed to by ele who owns the element.
 		* After this, the ownership is taken.
+		* 
+		* @param Note: if duplication is allowed in any insertion, then it cannot be turned off all insertions afterwards (the function will not act according to bAllowDuplication afterwards).
+		* As a consequence, it is strongly recommended that it is always allowed or not allowed for any single tree
 		*
 		* @returns the iterator to the newly inserted element
 		*/
-		virtual iterator insert(T* ele)
+		virtual iterator insert(T* ele, bool bAllowDuplication = true)
 		{
 			Container<T>* x = root.get();
 			Container<T>* y = nullptr; // parent of x
@@ -156,13 +161,27 @@ namespace ghl
 			}
 			else
 			{
-				if (*ele <= y->get_obj())
+				if (bAllowDuplication)
 				{
-					y->set_left(res = new Container<T>(ele, y));
+					if (*ele <= y->get_obj())
+					{
+						y->set_left(res = new Container<T>(ele, y));
+					}
+					else
+					{
+						y->set_right(res = new Container<T>(ele, y));
+					}
 				}
 				else
 				{
-					y->set_right(res = new Container<T>(ele, y));
+					if (*ele < y->get_obj())
+					{
+						y->set_left(res = new Container<T>(ele, y));
+					}
+					else if(*ele > y->get_obj())
+					{
+						y->set_right(res = new Container<T>(ele, y));
+					}
 				}
 			}
 

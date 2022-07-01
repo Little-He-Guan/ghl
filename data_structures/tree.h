@@ -76,7 +76,9 @@ namespace ghl
 
 		// resets the object stored at root (destructs it and sets the pointer to ptr)
 		// by default, it's reset to nullptr
-		void reset_object(T* ptr = nullptr) { p_obj->reset(ptr); }
+		void reset_object(T* ptr = nullptr) { p_obj.reset(ptr); }
+		// releases the ownership of the object and returns the pointer to it
+		T* release_object() { return p_obj.release(); }
 
 		// @returns the object stored at root
 		T& get_obj() { return *p_obj; }
@@ -478,8 +480,30 @@ namespace ghl
 			height(other.height) {}
 
 	public:
-		void set_left(super* n) override { this->super::set_left(n); update_height_on_path(this->left<binary_tree_with_height>()); }
-		void set_right(super* n) override { this->super::set_right(n); update_height_on_path(this->right<binary_tree_with_height>()); }
+		void set_left(super* n) override 
+		{ 
+			if (nullptr == n) // if nullptr is n, the path cannot be from it's left
+			{
+				this->reset_left();
+			}
+			else
+			{
+				this->super::set_left(n);
+				update_height_on_path(this->left<binary_tree_with_height>());
+			}
+		}
+		void set_right(super* n) override 
+		{ 
+			if (nullptr == n) // if nullptr is n, the path cannot be from it's left
+			{
+				this->reset_right();
+			}
+			else
+			{
+				this->super::set_right(n);
+				update_height_on_path(this->right<binary_tree_with_height>());
+			}
+		}
 		void emplace_left(T* p_obj = nullptr, binary_tree_with_height* parent = nullptr, binary_tree_with_height* left = nullptr, binary_tree_with_height* right = nullptr) { set_left(new binary_tree_with_height(p_obj, parent, left, right)); }
 		void emplace_right(T* p_obj = nullptr, binary_tree_with_height* parent = nullptr, binary_tree_with_height* left = nullptr, binary_tree_with_height* right = nullptr) { set_right(new binary_tree_with_height(p_obj, parent, left, right)); }
 		void reset_left() override { this->super::reset_left(); /* now it's branch is reset, the path end becomes this */ update_height_on_path(this); }

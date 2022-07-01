@@ -149,6 +149,7 @@
     <ClCompile Include="sorting_test.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="binary_search_tree_test.cpp" />
+    <ClCompile Include="tree_set_test.cpp" />
     <ClCompile Include="vector_test.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -161,6 +162,9 @@
     <ProjectReference Include="..\unit_test\unit_test.vcxproj">
       <Project>{51263330-4b61-42ac-b2fb-f50cc5af4a92}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="set_test.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -52,6 +52,10 @@ namespace ghl
 * 2. the function is consistent (i.e. all calls to it give the same info)
 * 
 * The function should be defined by DEFINE_TEST_CASE and ENDDEF_TEST_CASE macros, and may be declared by DECLARE_TEST_CASE macro
+* 
+* In addition, users can define a test case template that is used to test different derived classes from a common super class with their mutual methods (member functions)
+* inside the definition, the users should use INTERFACE to refer to the type of a derived class of the interface
+* (the test case template is but a template function, and INTERFACE is its template parameter)
 */
 
 // the two macros are used to convert __LINE__ from an integer literal to a string literal
@@ -64,4 +68,6 @@ namespace ghl
 
 #define DECLARE_TEST_CASE(name) extern void name(ghl::test_case_info & ghl_arg);
 #define DEFINE_TEST_CASE(name) void name(ghl::test_case_info & ghl_arg) { ghl_arg.begin_test_case();
+#define DEFINE_TEST_CASE_TEMPLATE(name) template <typename INTERFACE> DEFINE_TEST_CASE(name)
 #define ENDDEF_TEST_CASE ghl_arg.end_test_case(); }
+#define ENDDEF_TEST_CASE_TEMPLATE ENDDEF_TEST_CASE

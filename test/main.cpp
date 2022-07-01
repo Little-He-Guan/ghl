@@ -7,6 +7,7 @@ void test_dp();
 void test_queue();
 void test_bst();
 void test_avl_tree();
+void test_tree_set();
 
 int main()
 {
@@ -29,9 +30,13 @@ int main()
 	//test_queue();
 
 	// passed
-	test_bst();
+	//test_bst();
+	
+	// passed
+	//test_avl_tree();
 
-	test_avl_tree();
+	// passed
+	//test_tree_set();
 
 	return 0;
 }
