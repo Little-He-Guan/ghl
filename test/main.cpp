@@ -8,6 +8,7 @@ void test_queue();
 void test_bst();
 void test_avl_tree();
 void test_tree_set();
+void test_binary_heap();
 
 int main()
 {
@@ -37,6 +38,9 @@ int main()
 
 	// passed
 	//test_tree_set();
+
+	//
+	test_binary_heap();
 
 	return 0;
 }

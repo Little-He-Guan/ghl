@@ -118,17 +118,9 @@ namespace ghl
 
 		~vector() noexcept
 		{
-			// we have to explicitly destroy elements since we use placement new
-			if (0 != m_size && nullptr != mp_start)
-			{
-				for (size_t i = 0; i != m_size; ++i)
-				{
-					(mp_start + i)->~T();
-				}
-
-				// start is not nullptr
-				free((void*)mp_start);
-			}
+			clear();
+			// start is not nullptr
+			free((void*)mp_start);
 		}
 #pragma endregion
 
@@ -143,14 +135,7 @@ namespace ghl
 
 				// free the memory
 				{
-					// we have to explicitly destroy elements since we use placement new
-					if (0 != m_size)
-					{
-						for (size_t i = 0; i != m_size; ++i)
-						{
-							(mp_start + i)->~T();
-						}
-					}
+					clear();
 					// start is not nullptr
 					free(mp_start);
 				}
@@ -166,14 +151,7 @@ namespace ghl
 			}
 			else
 			{
-				// we have to explicitly destroy elements since we use placement new
-				if (0 != m_size)
-				{
-					for (size_t i = 0; i != m_size; ++i)
-					{
-						(mp_start + i)->~T();
-					}
-				}
+				clear();
 				// copy the elements
 				for (size_t i = 0; i != right.m_size; ++i)
 				{
@@ -190,15 +168,8 @@ namespace ghl
 		{
 			// free the memory
 			{
-				// we have to explicitly destroy elements since we use placement new
-				if (0 != m_size)
-				{
-					for (size_t i = 0; i != m_size; ++i)
-					{
-						(mp_start + i)->~T();
-					}
-				}
-				// start is not nullptr
+				clear();
+				// start is not nullptr once the vector is constructed
 				free(mp_start);
 			}
 
@@ -254,7 +225,24 @@ namespace ghl
 		* Never call it on moved vectors!
 		* @return true iff the invariant holds
 		*/
-		inline bool check_rep() const { return m_size <= m_capacity; }
+		inline bool check_rep() const { return m_size <= m_capacity && mp_start != nullptr; }
+
+		/*
+		* Destroys all elements stored, but does not free the memory allocated
+		*/
+		void clear()
+		{
+			// we have to explicitly destroy elements since we use placement new
+			if (0 != m_size)
+			{
+				for (size_t i = 0; i != m_size; ++i)
+				{
+					(mp_start + i)->~T();
+				}
+
+				m_size = 0;
+			}
+		}
 
 		/*
 		* Resizes the vector so that it can contain at least new_size elements

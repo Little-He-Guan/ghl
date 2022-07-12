@@ -5,128 +5,204 @@
 namespace ghl
 {
 	/*
-	* A max-heap
-	* 
-	* if lightweight is true, T occupies a small amount of memory and can be easily copied, and it's stored in-place
-	* otherwise, the objects are stored via pointers
-	* 
-	* Its indices start from 1, not 0.
+	* Base class for all binary heaps
+	* (The index exposed to users starts from 1, not 0)
 	*/
-	template <typename T, bool LightWeight = true>
+	template <typename T>
 	class binary_heap
 	{
 	public:
 		// gives an empty heap
 		binary_heap() {}
-		// inits the heap with an unordered list of elements, O(n)
-		binary_heap(const std::initializer_list<T>& in_list)
-			: data(in_list), heap_size(in_list.size())
-		{
-			for (size_t i = data.size() / 2; i != 0; --i)
-			{
-				max_heapify(i);
-			}
-		}
-	public:
+		//// inits the heap with an unordered list of elements, O(n)
+		//binary_heap(const std::initializer_list<T>& in_list)
+		//	: data(in_list), heap_size(in_list.size())
+		//{
+		//	for (size_t i = data.size() / 2; i != 0; --i)
+		//	{
+		//		max_heapify(i);
+		//	}
+		//}
+
+		virtual ~binary_heap() {}
 
 	public:
 		static constexpr inline size_t left(size_t ind) { return 2 * ind; }
 		static constexpr inline size_t right(size_t ind) { return 2 * ind + 1; }
 		static constexpr inline size_t parent(size_t ind) { return ind / 2; /* floor(ind/2) */ }
 
-		T& operator[](size_t i) const { return data[i - 1]; }
+	public:
+		// Note: the behaviour is undefined if the index is out of bound
+		// @returns reference to the element at index i, but does not remove it.
+		virtual const T& operator[](size_t i) const = 0;
+		virtual T& operator[](size_t i) = 0;
+
+		// Note: the behaviour is undefined if the index is out of bound
+		// @returns a reference to the top element (max or min depending on the derived class) but does not remove it from the heap 
+		T& top() { return this->operator[](1); }
+		const T& top() const { return this->operator[](1); }
 
 	public:
+		// Note: the behaviour is undefined if the heap is empty
+		// @returns a copy to the top element and removes the it from the heap
+		virtual T extract_top() = 0;
+
 		/*
-		* If it is called with the subtrees at left(i) and right(i)
+		* Insert a new element into the heap
 		*/
-		void max_heapify(size_t i)
+		virtual void insert(T val) = 0;
+
+		/*
+		* Sets the value at index i to new_val, while maintaining the property
+		* The final value at i after the call consequently may not be new_val.
+		* 
+		* Note: derived classes may strengthen the specification in limiting new_val to be bigger/smaller than the original value.
+		*/
+		virtual void update_element(size_t i, T new_val) = 0;
+
+	protected:
+		/*
+		* heapify the heap starting from index i
+		* It assumes that the subtrees at left(i) and right(i) satisfy the property, but the subtree at i might not.
+		* It does nothing if i is out of bound.
+		*/
+		virtual void heapify(size_t i) = 0;
+
+	public:
+		virtual size_t size() const = 0;
+		bool empty() const { return 0 == size(); }
+
+	protected:
+	};
+
+	// implementation of max-heap for light-weight objects (that will be stored in-place)
+	template <typename T>
+	class max_heap_lw final : public binary_heap<T>
+	{
+		// to test private methods, we need an intrusive design
+		friend class max_heap_lw_tester;
+
+	private:
+		using super = binary_heap<T>;
+
+	public:
+		max_heap_lw() : super() {}
+		explicit max_heap_lw(const std::initializer_list<T>& init_list) : 
+			max_heap_lw(), data(init_list)
 		{
-			auto l = left(i), r = right(i);
-
-			size_t largest_ind = i;
-			if (l <= heap_size && data[l - 1] > data[largest_ind - 1])
+			for (size_t i = data.size() / 2; i >= 1; --i)
 			{
-				largest_ind = l;
-			}
-			if (r <= heap_size && data[r - 1] > data[largest_ind - 1])
-			{
-				largest_ind = r;
-			}
-
-			if (largest_ind != i)
-			{
-				std::swap(data[i - 1], data[largest_ind - 1]);
-				max_heapify(largest_ind);
+				heapify(i);
 			}
 		}
+		~max_heap_lw() {}
 
 	public:
-		/*
-		* returns the max
-		*/
-		T& max() const { return data[0]; }
+		const T& operator[](size_t i) const override { return data[i-1]; }
+		T& operator[](size_t i) override { return data[i-1]; }
 
-		/*
-		* returns a copy to the max and removes the max
-		*/
-		T extract_max()
+		size_t size() const override { return data.size(); }
+
+	public:
+		T extract_top() override
 		{
 			T res = data[0];
 
-			// move the last element to the top
-			data[0] = data[heap_size - 1];
-			--heap_size;
+			if (!this->empty())
+			{
+				// move the last element to the top
+				data[0] = data[data.size() - 1];
+				data.remove_back();
 
-			max_heapify(1);
+				heapify(1);
+			}
 
 			return res;
 		}
 		
-		/*
-		* if bigger_val > the element at index i,
-		* it is replaced with bigger_val.
-		* 
-		* The final value at the place after the call, however, may not be bigger_val, 
-		* because the max heap property has to be maintained.
-		*/
-		void increase_element(size_t i, T bigger_val)
+		void insert(T val) override
 		{
-			if (bigger_val > data[i - 1])
-			{
-				data[i - 1] = bigger_val;
+			data.push_back(val);
 
-				// maintain the property
-				while (i > 1 && data[parent(i) - 1] < data[i - 1])
-				{
-					std::swap(data[parent(i) - 1], data[i - 1]);
-					i = parent(i);
-				}
+			// maintain the heap property
+			size_t i = data.size();
+			while (i > 1 && data[super::parent(i) - 1] < data[i - 1])
+			{
+				std::swap(data[super::parent(i) - 1], data[i - 1]);
+				i = super::parent(i);
 			}
 		}
 
-		void insert(T val)
+		/*
+		* Here we limit new_val to be bigger than the value at i
+		* If the arguments supplied are otherwise, the behaviour is undefined.
+		*/
+		void update_element(size_t i, T new_val) override
 		{
-			++heap_size;
-
-			data.resize(heap_size);
-			data.increase_size(heap_size);
-
-			// construct an element = val at new heap_size - 1
-			new (&data[heap_size - 2] + 1) T(val);
-
-			// maintain the property
-			size_t i = heap_size;
-			while (i > 1 && data[parent(i) - 1] < data[i - 1])
+			if (new_val > data[i - 1])
 			{
-				std::swap(data[parent(i) - 1], data[i - 1]);
-				i = parent(i);
+				data[i - 1] = new_val;
+
+				// maintain the property
+				while (i > 1 && data[super::parent(i) - 1] < data[i - 1])
+				{
+					std::swap(data[super::parent(i) - 1], data[i - 1]);
+					i = super::parent(i);
+				}
+			}
+		}
+		
+	protected:
+		void heapify(size_t i) override
+		{			
+			// max-heapify
+
+			size_t heap_size = size();
+
+			if (i > 0 && i < heap_size)
+			{
+				size_t l = super::left(i), r = super::right(i);
+				size_t largest_ind = i;
+
+				if (l <= heap_size && data[l - 1] > data[i - 1]) // according to the execution order of a && operator, only if l <= size will data[l-1] be accessed
+				{
+					largest_ind = l;
+				}
+				if (r <= heap_size && data[r - 1] > data[largest_ind - 1]) // similar to the previous comment
+				{
+					largest_ind = r;
+				}
+
+				if (largest_ind != i)
+				{
+					std::swap(data[i - 1], data[largest_ind - 1]);
+					heapify(largest_ind);
+				}
 			}
 		}
 
 	private:
 		ghl::vector<T> data;
-		// different from data.size
-		size_t heap_size = 0;
+	};
+
+	/*
+	* implementation of max - heap for heavy - weight objects(that will be stored via pointers)
+	* Note: the heap does not have the ownership of the objects
+	*/ 
+	template <typename T>
+	class max_heap_hw final : public binary_heap<T*> // we allocate hw objects dynamically and refer to them by pointers
+	{
+	private:
+		using super = binary_heap<T>;
+	public:
+		using obj_t = T;
+		using ptr_t = T*;
+
+	public:
+		max_heap_hw() : super() {}
+		~max_heap_hw() {}
+
+	private:
+		ghl::vector<ptr_t> data;
 	};
 }

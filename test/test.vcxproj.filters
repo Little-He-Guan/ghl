@@ -48,6 +48,9 @@
     <ClCompile Include="tree_set_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="binary_heap_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="set_test.h">
