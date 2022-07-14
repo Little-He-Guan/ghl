@@ -186,21 +186,339 @@ namespace ghl
 	};
 
 	/*
-	* implementation of max - heap for heavy - weight objects(that will be stored via pointers)
-	* Note: the heap does not have the ownership of the objects
+	* implementation of max-heap for heavy-weight objects(that will be stored via pointers)
+	* Note: 
+	* 1. the heap does not have the ownership of the objects.
+	* 2. if two or more pointers to the same place are added in the heap by any means, the behaviour is undefined
 	*/ 
 	template <typename T>
 	class max_heap_hw final : public binary_heap<T*> // we allocate hw objects dynamically and refer to them by pointers
 	{
 	private:
-		using super = binary_heap<T>;
+		using super = binary_heap<T*>;
 	public:
 		using obj_t = T;
 		using ptr_t = T*;
 
 	public:
 		max_heap_hw() : super() {}
+		explicit max_heap_hw(const std::initializer_list<ptr_t>& init_list) :
+			max_heap_hw(), data(init_list)
+		{
+			for (size_t i = data.size() / 2; i >= 1; --i)
+			{
+				heapify(i);
+			}
+		}
 		~max_heap_hw() {}
+
+	public:
+		const ptr_t& operator[](size_t i) const override { return data[i - 1]; }
+		ptr_t& operator[](size_t i) override { return data[i - 1]; }
+
+		size_t size() const override { return data.size(); }
+
+	public:
+		ptr_t extract_top() override
+		{
+			ptr_t res = data[0];
+
+			if (!this->empty())
+			{
+				// move the last element to the top
+				data[0] = data[data.size() - 1];
+				data.remove_back();
+
+				heapify(1);
+			}
+
+			return res;
+		}
+
+		void insert(ptr_t val) override
+		{
+			data.push_back(val);
+
+			// maintain the heap property
+			size_t i = data.size();
+			while (i > 1 && *data[super::parent(i) - 1] < *data[i - 1])
+			{
+				std::swap(data[super::parent(i) - 1], data[i - 1]);
+				i = super::parent(i);
+			}
+		}
+
+		/*
+		* Here we limit *new_val to be bigger than the value pointed to by the ptr at i
+		* If the arguments supplied are otherwise, the behaviour is undefined.
+		*/
+		void update_element(size_t i, ptr_t new_val) override
+		{
+			if (*new_val > *data[i - 1])
+			{
+				data[i - 1] = new_val;
+
+				// maintain the property
+				while (i > 1 && *data[super::parent(i) - 1] < *data[i - 1])
+				{
+					std::swap(data[super::parent(i) - 1], data[i - 1]);
+					i = super::parent(i);
+				}
+			}
+		}
+
+	protected:
+		void heapify(size_t i) override
+		{
+			// max-heapify
+
+			size_t heap_size = size();
+
+			if (i > 0 && i < heap_size)
+			{
+				size_t l = super::left(i), r = super::right(i);
+				size_t largest_ind = i;
+
+				if (l <= heap_size && *data[l - 1] > *data[i - 1]) // according to the execution order of a && operator, only if l <= size will data[l-1] be accessed
+				{
+					largest_ind = l;
+				}
+				if (r <= heap_size && *data[r - 1] > *data[largest_ind - 1]) // similar to the previous comment
+				{
+					largest_ind = r;
+				}
+
+				if (largest_ind != i)
+				{
+					std::swap(data[i - 1], data[largest_ind - 1]);
+					heapify(largest_ind);
+				}
+			}
+		}
+
+	private:
+		ghl::vector<ptr_t> data;
+	};
+
+	// implementation of max-heap for light-weight objects (that will be stored in-place)
+	template <typename T>
+	class min_heap_lw final : public binary_heap<T>
+	{
+	private:
+		using super = binary_heap<T>;
+
+	public:
+		min_heap_lw() : super() {}
+		explicit min_heap_lw(const std::initializer_list<T>& init_list) :
+			min_heap_lw(), data(init_list)
+		{
+			for (size_t i = data.size() / 2; i >= 1; --i)
+			{
+				heapify(i);
+			}
+		}
+		~min_heap_lw() {}
+
+	public:
+		const T& operator[](size_t i) const override { return data[i - 1]; }
+		T& operator[](size_t i) override { return data[i - 1]; }
+
+		size_t size() const override { return data.size(); }
+
+	public:
+		T extract_top() override
+		{
+			T res = data[0];
+
+			if (!this->empty())
+			{
+				// move the last element to the top
+				data[0] = data[data.size() - 1];
+				data.remove_back();
+
+				heapify(1);
+			}
+
+			return res;
+		}
+
+		void insert(T val) override
+		{
+			data.push_back(val);
+
+			// maintain the heap property
+			size_t i = data.size();
+			while (i > 1 && data[super::parent(i) - 1] > data[i - 1])
+			{
+				std::swap(data[super::parent(i) - 1], data[i - 1]);
+				i = super::parent(i);
+			}
+		}
+
+		/*
+		* Here we limit new_val to be smaller than the value at i
+		* If the arguments supplied are otherwise, the behaviour is undefined.
+		*/
+		void update_element(size_t i, T new_val) override
+		{
+			if (new_val < data[i - 1])
+			{
+				data[i - 1] = new_val;
+
+				// maintain the property
+				while (i > 1 && data[super::parent(i) - 1] > data[i - 1])
+				{
+					std::swap(data[super::parent(i) - 1], data[i - 1]);
+					i = super::parent(i);
+				}
+			}
+		}
+
+	protected:
+		void heapify(size_t i) override
+		{
+			// max-heapify
+
+			size_t heap_size = size();
+
+			if (i > 0 && i < heap_size)
+			{
+				size_t l = super::left(i), r = super::right(i);
+				size_t smallest_ind = i;
+
+				if (l <= heap_size && data[l - 1] < data[i - 1]) // according to the execution order of a && operator, only if l <= size will data[l-1] be accessed
+				{
+					smallest_ind = l;
+				}
+				if (r <= heap_size && data[r - 1] < data[smallest_ind - 1]) // similar to the previous comment
+				{
+					smallest_ind = r;
+				}
+
+				if (smallest_ind != i)
+				{
+					std::swap(data[i - 1], data[smallest_ind - 1]);
+					heapify(smallest_ind);
+				}
+			}
+		}
+
+	private:
+		ghl::vector<T> data;
+	};
+
+	/*
+	* implementation of max-heap for heavy-weight objects(that will be stored via pointers)
+	* Note:
+	* 1. the heap does not have the ownership of the objects.
+	* 2. if two or more pointers to the same place are added in the heap by any means, the behaviour is undefined
+	*/
+	template <typename T>
+	class min_heap_hw final : public binary_heap<T*> // we allocate hw objects dynamically and refer to them by pointers
+	{
+		// to test private methods, we need an intrusive design
+		friend class min_heap_hw_tester;
+	private:
+		using super = binary_heap<T*>;
+	public:
+		using obj_t = T;
+		using ptr_t = T*;
+
+	public:
+		min_heap_hw() : super() {}
+		explicit min_heap_hw(const std::initializer_list<ptr_t>& init_list) :
+			min_heap_hw(), data(init_list)
+		{
+			for (size_t i = data.size() / 2; i >= 1; --i)
+			{
+				heapify(i);
+			}
+		}
+		~min_heap_hw() {}
+
+	public:
+		const ptr_t& operator[](size_t i) const override { return data[i - 1]; }
+		ptr_t& operator[](size_t i) override { return data[i - 1]; }
+
+		size_t size() const override { return data.size(); }
+
+	public:
+		ptr_t extract_top() override
+		{
+			ptr_t res = data[0];
+
+			if (!this->empty())
+			{
+				// move the last element to the top
+				data[0] = data[data.size() - 1];
+				data.remove_back();
+
+				heapify(1);
+			}
+
+			return res;
+		}
+
+		void insert(ptr_t val) override
+		{
+			data.push_back(val);
+
+			// maintain the heap property
+			size_t i = data.size();
+			while (i > 1 && *data[super::parent(i) - 1] > *data[i - 1])
+			{
+				std::swap(data[super::parent(i) - 1], data[i - 1]);
+				i = super::parent(i);
+			}
+		}
+
+		/*
+		* Here we limit *new_val to be smaller than the value pointed to by the ptr at i
+		* If the arguments supplied are otherwise, the behaviour is undefined.
+		*/
+		void update_element(size_t i, ptr_t new_val) override
+		{
+			if (*new_val < *data[i - 1])
+			{
+				data[i - 1] = new_val;
+
+				// maintain the property
+				while (i > 1 && *data[super::parent(i) - 1] > *data[i - 1])
+				{
+					std::swap(data[super::parent(i) - 1], data[i - 1]);
+					i = super::parent(i);
+				}
+			}
+		}
+
+	protected:
+		void heapify(size_t i) override
+		{
+			// max-heapify
+
+			size_t heap_size = size();
+
+			if (i > 0 && i < heap_size)
+			{
+				size_t l = super::left(i), r = super::right(i);
+				size_t smallest_ind = i;
+
+				if (l <= heap_size && *data[l - 1] < *data[i - 1]) // according to the execution order of a && operator, only if l <= size will data[l-1] be accessed
+				{
+					smallest_ind = l;
+				}
+				if (r <= heap_size && *data[r - 1] < *data[smallest_ind - 1]) // similar to the previous comment
+				{
+					smallest_ind = r;
+				}
+
+				if (smallest_ind != i)
+				{
+					std::swap(data[i - 1], data[smallest_ind - 1]);
+					heapify(smallest_ind);
+				}
+			}
+		}
 
 	private:
 		ghl::vector<ptr_t> data;
